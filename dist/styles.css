@@ -839,3 +839,20 @@ dialog.modal::backdrop { background: #44315355; backdrop-filter: blur(4px); }
 #study-sync-status button { display: inline-block; margin: 5px 5px 0 0; padding: 4px 7px; border: 1px solid #e9d6ef; border-radius: 8px; color: #6c477c; background: #fff8ff; cursor: pointer; font: inherit; }
 #study-sync-status button:focus-visible { outline: 2px solid #9e6bb5; outline-offset: 2px; }
 #study-tools-status { color: #8b7697; margin-top: 5px; }
+.study-role-button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #ecdce9; border-radius: 18px; padding: 7px 13px; background: #fff6fa; color: #694768; font: inherit; font-size: 12px; cursor: pointer; }
+.study-role-button span:first-child { font-size: 20px; }
+.study-role-dialog { width: min(520px,calc(100% - 32px)); max-height: 88vh; overflow: auto; border: 1px solid #f0dfed; border-radius: 28px; padding: 30px; color: #493b59; background: #fffafd; box-shadow: 0 24px 90px #66516b32; }
+.study-role-dialog::backdrop { background: #45374b4d; backdrop-filter: blur(4px); }
+.role-picker-heading { text-align: center; }
+.role-picker-heading h2 { margin: 4px 0 12px; font-size: 25px; }
+.role-picker-heading p { color: #8a7792; line-height: 1.8; font-size: 13px; }
+.role-picker-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 15px; margin: 24px 0 16px; }
+.role-card { display: grid; justify-items: center; gap: 10px; padding: 25px 12px; border: 1px solid #eddde9; border-radius: 22px; background: #fff3f7; color: #644965; font: inherit; cursor: pointer; }
+.role-card[data-role="sheep"] { background: #f3efff; }
+.role-card:hover { border-color: #bd98c6; transform: translateY(-2px); }
+.role-card[aria-pressed="true"] { outline: 2px solid #c2a0d2; outline-offset: 2px; }
+.role-avatar { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: #ffffffd9; font-size: 48px; }
+.role-card strong { font-size: 18px; }
+.role-card small, .role-switch-note { font-size: 12px; line-height: 1.8; color: #8a7792; }
+.role-switch-note { min-height: 22px; text-align: center; }
+@media (max-width: 680px) { .study-role-button { padding: 6px 9px; } .study-role-dialog { padding: 24px 18px; } .role-picker-list { gap: 10px; } .role-avatar { width: 62px; height: 62px; font-size: 40px; } .topbar-actions .avatar { display: none; } }

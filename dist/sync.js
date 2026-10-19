@@ -1,10 +1,11 @@
 /* 学习记录通过本站的同源接口同步；登录凭据由站点管理，不进入网页存储。 */
 (function (global) {
   'use strict';
-  const META_KEY = 'study-bloom-cloud-sync-v1';
-  const APP_KEY = 'study-bloom-v1';
-  const LEARNING_KEY = 'study-bloom-learning-v2';
-  const ENDPOINT = '/api/study/state';
+  const roleKey = base => global.StudyRole?.storageKey(base) || base;
+  const META_KEY = roleKey('study-bloom-cloud-sync-v1');
+  const APP_KEY = roleKey('study-bloom-v1');
+  const LEARNING_KEY = roleKey('study-bloom-learning-v2');
+  const ENDPOINT = global.StudyRole?.endpoint('/api/study/state') || '/api/study/state';
   const SITE = 'https://study-bloom.yellow-spool-5033.chatgpt.site/#coach';
   const host = global.location.hostname.toLowerCase();
   const localOnly = host === 'localhost' || host.endsWith('.localhost') || /^127\./.test(host) || host === '[::1]' || host === '::1' || !/^https?:$/.test(global.location.protocol);
@@ -48,7 +49,7 @@
     catch (_) { storageWarning = true; }
   }
   function status() {
-    return {mode: localOnly ? 'local' : 'cloud', state, verified, revision: meta.revision, dirty: meta.dirty, cloudSaved: !localOnly && verified && state === 'ready' && !meta.dirty && !conflict, updatedAt, error, conflict: Boolean(conflict), backupAvailable: Boolean(meta.backup), storageWarning};
+    return {mode: localOnly ? 'local' : 'cloud', roleId: global.StudyRole?.id || 'apple', state, verified, revision: meta.revision, dirty: meta.dirty, cloudSaved: !localOnly && verified && state === 'ready' && !meta.dirty && !conflict, updatedAt, error, conflict: Boolean(conflict), backupAvailable: Boolean(meta.backup), storageWarning};
   }
   function notify() {
     mount();
@@ -219,7 +220,7 @@
   }
   function downloadBackup() {
     if (!meta.backup) return;
-    const data = {...meta.backup.state.app, learning: meta.backup.state.learning};
+    const data = {...meta.backup.state.app, roleId: global.StudyRole?.id || 'apple', learning: meta.backup.state.learning};
     const url = global.URL.createObjectURL(new global.Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
     const link = global.document.createElement('a'); link.href = url; link.download = '知芽-同步冲突保留副本.json'; link.click(); global.URL.revokeObjectURL(url);
   }

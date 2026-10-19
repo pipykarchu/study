@@ -1,7 +1,8 @@
 // Sites supplies verified visitor identity at the deployment boundary. No service-token bypass.
 const MAX_BODY = 2_000_000;
-const PROFILE_IDS = ['product', 'coding', 'custom'];
-const APP_KEYS = ['version', 'profile', 'goals', 'completed', 'tasks', 'notes', 'reviews', 'projectTasks', 'boundaries', 'minutes', 'day', 'timer'];
+const PROFILE_IDS = ['product', 'coding', 'custom', 'fde'];
+const APP_KEYS = ['version', 'profile', 'goals', 'completed', 'tasks', 'notes', 'reviews', 'projectTasks', 'boundaries', 'minutes', 'day', 'timer', 'frameworks'];
+const ICON_NAMES = ['garden', 'map', 'book', 'project', 'spark', 'shelf', 'arrow', 'check', 'clock', 'github', 'target', 'copy', 'plus', 'download'];
 const IDENTITY = {verified: true, owner: true};
 const SECURITY_HEADERS = {
   'Cache-Control': 'private, no-store',
@@ -36,7 +37,7 @@ function boundedTree(value, depth = 0, budget = {n: 0}) {
 }
 function validText(value, limit) {if (typeof value !== 'string' || value.length > limit) invalid();}
 function validateApp(raw) {
-  keys(raw, APP_KEYS, APP_KEYS);
+  keys(raw, APP_KEYS, APP_KEYS.filter(key => key !== 'frameworks'));
   if (raw.version !== 1 || !PROFILE_IDS.includes(raw.profile) || !integer(raw.minutes, 15, 180) || !integer(raw.day, 0, 9)) invalid();
   for (const name of ['goals', 'completed', 'tasks', 'notes', 'projectTasks', 'boundaries']) {
     if (!object(raw[name]) || Object.keys(raw[name]).length > 200) invalid();
@@ -66,7 +67,22 @@ function validateApp(raw) {
   }
   keys(raw.timer, ['remaining', 'deadline'], ['remaining', 'deadline']);
   if (!integer(raw.timer.remaining, 0, 1500) || !(raw.timer.deadline === null || integer(raw.timer.deadline, 0, 8_640_000_000_000_000))) invalid();
-  return JSON.parse(JSON.stringify(raw));
+  const frameworks = raw.frameworks === undefined ? {} : raw.frameworks;
+  keys(frameworks, PROFILE_IDS);
+  const cleanFrameworks = {};
+  for (const [profileId, framework] of Object.entries(frameworks)) {
+    keys(framework, ['nodes', 'summary', 'updatedAt'], ['nodes', 'summary', 'updatedAt']);
+    validText(framework.summary, 2000);
+    if (!integer(framework.updatedAt, 0, 8_640_000_000_000_000) || !Array.isArray(framework.nodes) || framework.nodes.length !== 6) invalid();
+    const nodes = framework.nodes.map(node => {
+      if (!Array.isArray(node) || node.length !== 5) invalid();
+      [120, 500, 2000, 2000, 30].forEach((limit, i) => {validText(node[i], limit); if (!node[i].trim()) invalid();});
+      if (!ICON_NAMES.includes(node[4])) invalid();
+      return node.map(text => text.trim());
+    });
+    cleanFrameworks[profileId] = {nodes, summary: framework.summary, updatedAt: framework.updatedAt};
+  }
+  return JSON.parse(JSON.stringify({...raw, frameworks: cleanFrameworks}));
 }
 
 /*__LEARNING_VALIDATOR__*/
@@ -92,6 +108,12 @@ async function identify(request, env) {
   for (let i = 0; i < 64; i++) difference |= expected.charCodeAt(i) ^ actual.charCodeAt(i);
   if (difference !== 0) throw new HttpError(403, 'owner_mismatch', '这里只允许所有者账号使用，请切换为你自己的账号。');
   return id;
+}
+function roleStorageKey(id, url) {
+  const values = url.searchParams.getAll('role');
+  if (values.length > 1 || values.length === 1 && !['apple', 'sheep'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择小苹果或小羊。');
+  // Verified identity excludes control characters; this internal suffix cannot collide with a real user id.
+  return values[0] === 'sheep' ? id + '\u001frole:sheep' : id;
 }
 function sameOrigin(request, requireOrigin = false) {
   const origin = request.headers.get('Origin');
@@ -152,7 +174,7 @@ export default {
     try {
       const id = await identify(request, env);
       const url = new URL(request.url);
-      if (url.pathname === '/api/study/state') return await stateApi(request, env, id);
+      if (url.pathname === '/api/study/state') return await stateApi(request, env, roleStorageKey(id, url));
       if (url.pathname.startsWith('/api/')) return json({code: 'not_found', error: '没有这个学习接口。'}, 404);
       if (!['GET', 'HEAD'].includes(request.method)) return json({code: 'method_not_allowed', error: '此页面仅支持浏览。'}, 405, {Allow: 'GET, HEAD'});
       const asset = STATIC_ASSETS[url.pathname === '/' ? '/index.html' : url.pathname];

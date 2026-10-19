@@ -1,10 +1,12 @@
 /* 练习参考题：按知芽当前学习骨架编写，并非视频原题，也不是能力证书。
  * 本地进度只记录显式学习动作与答题证据，不会因为 AI 回复自动增加。
+ * FDE 题按公开职责范围与工程常识编写，并非 OpenAI 官方试题：
+ * https://openai.com/careers/forward-deployed-engineer-(fde)-seattle-seattle/
  */
 (function (global) {
   'use strict';
-  const KEY = 'study-bloom-learning-v2';
-  const PROFILE_IDS = ['product', 'coding', 'custom'];
+  const KEY = global.StudyRole?.storageKey('study-bloom-learning-v2') || 'study-bloom-learning-v2';
+  const PROFILE_IDS = ['product', 'coding', 'custom', 'fde'];
   const DAY = 86400000;
   const MAX_TIME = 8640000000000000 - 3 * DAY;
   const LIMIT = 100;
@@ -49,6 +51,20 @@
       Q(5, '一个小网站的 README 最应包含哪组信息？', ['只放一句“这是最棒的网站”', '用途、启动方式、关键用法和已知限制', '账号密码与访问令牌'], 1, 'README 应帮助别人运行和理解项目；凭据不应写入说明或代码仓库。'),
       Q(5, '下一轮迭代应该优先选择什么？', ['每次换一个新框架', '给所有区域加动效', '依据真实失败记录，选择影响核心任务且能验证的改进'], 2, '迭代应服务于用户任务，并能通过明确检查判断改进是否有效。')
     ],
+    fde: [
+      Q(0, '客户希望“用 AI 提高效率”，FDE 最应该先确认什么？', ['先承诺模型能完成所有工作', '现有工作流、使用者、基线耗时与可衡量的业务结果', '先把模型换成参数最多的版本'], 1, '先理解客户工作流和现状，才能把技术方案连接到业务指标，并检验上线后的实际改善。'),
+      Q(0, '检验客服辅助项目的业务价值，哪组指标更合适？', ['只统计演示的掌声次数', '只统计调用模型的次数', '结合人工处理耗时、答复质量和实际使用率，与上线前基线比较'], 2, '价值需要同时看工作流影响、质量和采纳情况。调用量本身不能证明客户的问题得到解决。'),
+      Q(1, '需求发现阶段，哪种做法最有助于确定首版范围？', ['观察真实任务，与业务和工程负责人确认痛点、约束和验收标准', '只看一个成功演示就开始承诺交付', '把所有部门的愿望都放进首版'], 0, 'FDE 需要和客户团队一起发现问题并约定范围；真实任务、约束与验收标准能减少交付偏差。'),
+      Q(1, '客户临近上线提出大量新功能，FDE 应该怎样处理？', ['全部答应，不调整时间与质量要求', '评估价值、依赖和风险，与负责人明确取舍、分期和变更后的验收标准', '直接忽略需求，不告诉客户'], 1, '交付需要在范围、速度与质量间做明确取舍。共同确认变更影响与分期能保护关键工作流。'),
+      Q(2, '把助手接入客户知识库前，哪项检查最关键？', ['把所有资料复制进公开仓库', '让模型自行决定每个用户能看到什么', '确认数据来源、接口约定、访问权限和更新方式，并测试权限边界'], 2, '系统集成不仅要能连通，还要保证资料可追溯、接口可处理、权限由系统执行，并能随数据更新。'),
+      Q(2, '助手要调用客户订单接口，哪种设计更可靠？', ['校验输入与返回值，设置超时和有界重试，并让重复请求不产生重复写入', '无限重试直到订单成功', '把浏览器里的密钥写进公开页面'], 0, '真实接口会超时或失败，需要输入输出校验和明确的失败处理；会写入的操作还应考虑幂等性与权限。'),
+      Q(3, '原型只有几个成功演示，怎样判断是否接近可交付？', ['把演示视频作为全部验收依据', '用代表性真实任务、边界和失败案例建立评测集，按预先约定的标准测试', '直接让所有客户用户使用'], 1, '原型成功不代表稳定交付。代表性案例与明确标准能帮助发现失败模式，并支持方案迭代。'),
+      Q(3, '比较两个模型方案时，哪种记录最有助于做取舍？', ['只看回答哪一个更长', '只保留成功的例子', '在相同案例上比较质量、延迟、成本与失败类型，并说明适用边界'], 2, '方案评测要服务客户工作流。同一评测范围内比较多个指标和失败类型，才便于作出可解释的取舍。'),
+      Q(4, '把 AI 原型上线到生产前，哪组准备最完整？', ['小范围灰度、监控告警、回滚方案、人工接管和明确的运行负责人', '上线后再考虑故障', '只确认首页可以打开'], 0, '生产交付需要可观测、可恢复和明确的责任人。灰度和人工接管能限制失败影响，并帮助稳定推广。'),
+      Q(4, '上线后模型服务间歇超时，合理的处理是？', ['持续显示成功，让客户自己发现问题', '监控失败与延迟，限制重试，提供降级或人工处理，并验证恢复', '不看日志，随机重写全部代码'], 1, '故障处理应依据可观察的信号，控制重试放大影响，并通过降级或人工流程维持关键业务。'),
+      Q(5, '系统技术上已上线，哪项更能证明客户真正采纳？', ['项目代码量增加', '所有功能都有截图', '目标用户持续用于真实任务，工作流指标改善，并有培训与反馈机制'], 2, 'FDE 的交付结果包含生产采纳和可衡量的工作流影响。技术上线是起点，还需要支持用户形成稳定使用方式。'),
+      Q(5, '项目复盘时，怎样让现场经验帮助后续项目？', ['记录结果、失败与取舍，把可复用做法整理成工具或交付手册，并向产品团队反馈', '只说项目很成功，不记录限制', '只保存一次演示，不整理实际使用反馈'], 0, '复盘应保留证据与边界，并把有效模式沉淀为可复用工具、手册和产品反馈，减少下一次重复踩坑。')
+    ],
     custom: [
       Q(0, '开始学一个新主题，哪种目标最清楚？', ['尽可能学完一切', '说出实际用途、目标水平，并规定一个可演示成果', '先收藏一百份资料'], 1, '可观察的用途、水平和成果能帮助确定边界，避免无目的地积累资料。'),
       Q(0, '遇到与当前成果无关的高阶内容，应该怎样处理？', ['立刻抛开原目标深挖', '认定永远没有价值', '记录到暂不学清单，当前先完成目标需要的部分'], 2, '暂不学习是范围管理。保留线索，待应用场景出现后再决定是否深入。'),
@@ -69,7 +85,7 @@
   const profileId = profile => {if (!PROFILE_IDS.includes(profile)) throw new Error('未知学习方向'); return profile;};
   const stageId = stage => {if (!STAGE_IDS.includes(stage)) throw new Error('未知学习阶段'); return stage;};
   const fresh = () => ({stage: 'frame', completedStages: [], quiz: {attempts: [], active: null}, recentEvidence: []});
-  const empty = () => ({version: 2, profiles: {product: fresh(), coding: fresh(), custom: fresh()}});
+  const empty = () => ({version: 2, profiles: {product: fresh(), coding: fresh(), custom: fresh(), fde: fresh()}});
   let data = empty();
   let storage = {available: true, warning: ''};
   const question = (profile, id) => bank[profile].find(q => q.id === id);
@@ -127,7 +143,7 @@
     checkObject(raw.profiles, PROFILE_IDS);
     const clean = empty();
     for (const profile of PROFILE_IDS) {
-      if (!Object.prototype.hasOwnProperty.call(raw.profiles, profile)) fail();
+      if (!Object.prototype.hasOwnProperty.call(raw.profiles, profile)) {if (profile === 'fde') continue; fail();}
       const p = checkObject(raw.profiles[profile], ['stage', 'completedStages', 'quiz', 'recentEvidence']);
       if (!STAGE_IDS.includes(p.stage) || !Array.isArray(p.completedStages) || p.completedStages.length > 7 || new Set(p.completedStages).size !== p.completedStages.length || p.completedStages.some(id => !STAGE_IDS.includes(id))) fail();
       const quiz = checkObject(p.quiz, ['attempts', 'active']);

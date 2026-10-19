@@ -18,6 +18,7 @@
   const sessions = new Map(), positions = new Map(), choices = new Map(), evidenceDrafts = new Map();
   const learning = () => window.StudyLearning;
   const profileKey = () => String(context.profileId || 'product');
+  const chatKey = key => window.StudyRole?.storageKey(`study-coach-chat-v2:${key}`)||`study-coach-chat-v2:${key}`;
   const stages = () => learning()?.stages || fallbackStages;
   const snapshot = () => learning()?.get(profileKey()) || {stage:'frame',completedStages:[],quiz:{attempts:[],bestScore:null,lastScore:null},recentEvidence:[]};
   const stageInfo = () => stages().find(s => s.id === snapshot().stage) || stages()[0];
@@ -26,7 +27,7 @@
     const key = profileKey();
     if (!sessions.has(key)) {
       let saved = {};
-      try { saved = JSON.parse(sessionStorage.getItem(`study-coach-chat-v2:${key}`) || '{}'); }
+      try { saved = JSON.parse(sessionStorage.getItem(chatKey(key)) || '{}'); }
       catch { sessionStorageAvailable = false; }
       const messages = Array.isArray(saved?.messages) ? saved.messages.filter(m => m && ['user','assistant'].includes(m.role) && typeof m.text === 'string').slice(-60).map(m => ({role:m.role,text:m.text.slice(0,80000),error:Boolean(m.error)})) : [];
       sessions.set(key, {messages, conversationId:null, draft:typeof saved?.draft === 'string' ? saved.draft.slice(0,8000) : ''});
@@ -34,13 +35,13 @@
     return sessions.get(key);
   }
   function saveSession(key, value) {
-    try { sessionStorage.setItem(`study-coach-chat-v2:${key}`, JSON.stringify({messages:value.messages.slice(-60),draft:value.draft})); }
+    try { sessionStorage.setItem(chatKey(key), JSON.stringify({messages:value.messages.slice(-60),draft:value.draft})); }
     catch { sessionStorageAvailable = false; }
   }
   function contextText() {
     if (!includeContext) return '';
     const b = context.boundaries || {}, st = stageInfo();
-    return `学习方向：${context.profile || ''}\n目标：${context.goal || ''}\n用途：${context.why || ''}\n验收作品：${context.outcome || ''}\n每次时间：${context.minutes || 45} 分钟\n必须掌握：${(b.must || []).join('；')}\n按需了解：${(b.optional || []).join('；')}\n暂时不学：${(b.later || []).join('；')}\n当前学习阶段：${st.title}\n知识节点：${(context.nodes || []).map(n => `${n.name}：${n.description || ''}；练习：${n.exercise || ''}；验收：${n.acceptance || ''}`).join('\n')}\n教学要求：用中文大白话，一次只推进一个小问题，先问再讲，练习和测验先不给答案；不要因我发了消息就宣称掌握。`.slice(0,12000);
+    return `学习角色：${context.roleName || window.StudyRole?.name || '小苹果'}（${context.roleId || window.StudyRole?.id || 'apple'}）\n学习方向：${context.profile || ''}\n目标：${context.goal || ''}\n用途：${context.why || ''}\n验收作品：${context.outcome || ''}\n每次时间：${context.minutes || 45} 分钟\n必须掌握：${(b.must || []).join('；')}\n按需了解：${(b.optional || []).join('；')}\n暂时不学：${(b.later || []).join('；')}\n当前学习阶段：${st.title}\n知识节点：${(context.nodes || []).map(n => `${n.name}：${n.description || ''}；练习：${n.exercise || ''}；验收：${n.acceptance || ''}`).join('\n')}\n教学要求：用中文大白话，一次只推进一个小问题，先问再讲，练习和测验先不给答案；不要因我发了消息就宣称掌握。`.slice(0,12000);
   }
   function stateText() {
     if (checking || !status) return '正在检查本机 Codex…';
@@ -83,7 +84,7 @@
   function messageList() {
     const messages = session().messages;
     if (!messages.length) return `<div class="coach-welcome"><span class="coach-welcome-flower" aria-hidden="true">✿</span><h2>先画一张地图，再一点点学会</h2><p>上方是本阶段的学习引导。选一个问题填入下方，按自己的节奏开始。</p><div class="coach-starters"><button class="coach-starter" data-coach-action="stage-prompt">从当前这一步开始 <span>↗</span></button><button class="coach-starter" data-coach-action="question-start">先问我一个问题，看看我会多少 <span>↗</span></button></div>${!local ? '<p class="coach-cloud-hint">在旁边的 Codex 对话里说：读取本站的学习目标，先问我一个问题。站点工具就绪后，Codex 可以把练习结果保存到这里。</p>' : ''}</div>`;
-    return messages.map(m => `<article class="coach-message ${m.role}"${m.error ? ' data-error="true"' : ''}><span class="coach-message-avatar" aria-hidden="true">${m.role === 'user' ? '我' : '✦'}</span><div><strong>${m.role === 'user' ? '我' : '我的 Codex · 实际回答'}</strong><div class="coach-message-text">${escape(m.text || (sending() && m.role === 'assistant' ? '正在想一想…' : '回答已停止。'))}</div></div></article>`).join('');
+    return messages.map(m => `<article class="coach-message ${m.role}"${m.error ? ' data-error="true"' : ''}><span class="coach-message-avatar" aria-hidden="true">${m.role === 'user' ? escape(context.roleAvatar || window.StudyRole?.avatar || '🍎') : '✦'}</span><div><strong>${m.role === 'user' ? '我' : '我的 Codex · 实际回答'}</strong><div class="coach-message-text">${escape(m.text || (sending() && m.role === 'assistant' ? '正在想一想…' : '回答已停止。'))}</div></div></article>`).join('');
   }
   function formActions() {
     return `<span>${local ? 'Enter 发送 · Shift + Enter 换行' : '先写问题，再复制到旁边的 Codex 对话'}</span><div class="coach-send-buttons"><button type="button" class="text-button" data-coach-action="copy-prompt">复制问题</button>${sending() ? '<button type="button" class="button secondary small" data-coach-action="stop">停止回答</button>' : `<button type="submit" class="button primary small" id="coach-send" ${!local || !status?.authenticated ? 'disabled' : ''}>发送给我的 Codex ↗</button>`}</div>`;
