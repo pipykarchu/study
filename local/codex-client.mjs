@@ -16,7 +16,7 @@ const DISABLED_FEATURES = [
   'skill_env_var_dependency_prompt', 'memories', 'hooks', 'tool_suggest',
 ];
 const TEACHER_INSTRUCTIONS = [
-  '你是知芽私人学习网站的学习教练。用中文、大白话，直接帮助用户理解知识。',
+  '你是貅知识私人学习网站的学习教练。用中文、大白话，直接帮助用户理解知识。',
   '先回答当前问题；需要时说明知识框架、必学/选学/暂不学边界、一个小练习和验收标准。',
   '这是纯文字教学会话。只根据用户提供的学习背景和你的知识回答，不执行命令，不读写文件，',
   '不调用浏览器、联网搜索、应用、连接器、MCP、技能、子代理或任何其他工具。',
@@ -252,7 +252,7 @@ export class CodexClient {
   }
 
   async ensureReady() {
-    if (this.closed) throw new StudyError('本机学习助手已关闭，请重新启动知芽。');
+    if (this.closed) throw new StudyError('本机学习助手已关闭，请重新启动貅知识。');
     this.checkCredentialRevision();
     if (this.ready && this.process) return;
     if (this.starting) return this.starting;
@@ -261,7 +261,7 @@ export class CodexClient {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
           await this.startProcess();
-          await this.rpc('initialize', { clientInfo: { name: 'study_bloom_local', title: '知芽私人学习教练', version: '1.0.0' } });
+          await this.rpc('initialize', { clientInfo: { name: 'study_bloom_local', title: '貅知识私人学习教练', version: '1.0.0' } });
           this.notify('initialized', {});
           await this.verifyOwnerAccount();
           // config/read is local and does not send an inference request. Keep only the model label.

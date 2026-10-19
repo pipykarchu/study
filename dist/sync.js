@@ -239,7 +239,7 @@
     if (!meta.backup) return;
     const data = {...meta.backup.state.app, roleId: ROLE_ID, learning: meta.backup.state.learning};
     const url = global.URL.createObjectURL(new global.Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
-    const link = global.document.createElement('a'); link.href = url; link.download = '知芽-同步冲突保留副本.json'; link.click(); global.URL.revokeObjectURL(url);
+    const link = global.document.createElement('a'); link.href = url; link.download = '貅知识-同步冲突保留副本.json'; link.click(); global.URL.revokeObjectURL(url);
   }
   function mount() {
     const root = global.document.getElementById('study-sync-status');

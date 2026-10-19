@@ -70,7 +70,7 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     try {
-      if (req.headers.host !== canonicalHost) throw new StudyError('请通过本机知芽地址打开。', 403, 'invalid_host');
+      if (req.headers.host !== canonicalHost) throw new StudyError('请通过本机貅知识地址打开。', 403, 'invalid_host');
       if (req.headers.origin && req.headers.origin !== origin) throw new StudyError('此请求来自其他网页，已拒绝。', 403, 'invalid_origin');
       if (req.headers['sec-fetch-site'] === 'cross-site') throw new StudyError('不允许其他网站访问本机助手。', 403, 'cross_site');
       if (req.headers['access-control-request-method']) throw new StudyError('不允许跨域访问本机助手。', 403, 'cross_origin');
@@ -85,7 +85,7 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
         if (req.method !== 'GET' && req.method !== 'POST') throw new StudyError('此请求方式不支持。', 405, 'method');
         if (req.method === 'POST') {
           // Fetch sends Origin for same-origin POST. Requiring it also prevents form/CSRF requests.
-          if (req.headers.origin !== origin || !secretEquals(req.headers['x-study-token'], token)) throw new StudyError('连接校验失败，请刷新本机知芽页面重试。', 403, 'invalid_token');
+          if (req.headers.origin !== origin || !secretEquals(req.headers['x-study-token'], token)) throw new StudyError('连接校验失败，请刷新本机貅知识页面重试。', 403, 'invalid_token');
         }
         if (pathname === '/api/codex/session' && req.method === 'GET') return replyJson(res, 200, { token });
         if (pathname === '/api/codex/status' && req.method === 'GET') return replyJson(res, 200, await codex.status());
@@ -144,7 +144,7 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
       stream.on('error', () => res.destroy());
       stream.pipe(res);
     } catch (error) {
-      replyJson(res, error instanceof StudyError ? error.status : 500, { error: error instanceof StudyError ? error.message : '本机知芽遇到问题，请刷新后重试。' });
+      replyJson(res, error instanceof StudyError ? error.status : 500, { error: error instanceof StudyError ? error.message : '本机貅知识遇到问题，请刷新后重试。' });
     }
   });
   server.headersTimeout = 10000;
@@ -181,10 +181,10 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const app = createStudyServer();
   app.listen().then((origin) => {
-    console.log(`知芽私人学习站已启动：${origin}`);
+    console.log(`貅知识私人学习站已启动：${origin}`);
     console.log('仅本机可访问；Codex 登录信息保留在这台电脑。关闭此进程即可停止。');
   }).catch((error) => {
-    console.error(error.code === 'EADDRINUSE' ? '本机 4175 端口已被占用，请先关闭旧的知芽服务。' : '知芽无法启动，请检查本机环境。');
+    console.error(error.code === 'EADDRINUSE' ? '本机 4175 端口已被占用，请先关闭旧的貅知识服务。' : '貅知识无法启动，请检查本机环境。');
     process.exitCode = 1;
   });
   let stopping = false;

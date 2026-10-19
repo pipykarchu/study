@@ -22,7 +22,7 @@
     const roleId = data.roleId === 'sheep' ? 'sheep' : 'apple';
     const roleName = data.roleName || (roleId === 'sheep' ? '小羊' : '貔貅');
     return [
-      '请帮我在知芽学习网站里搭建知识框架。',
+      '请帮我在貅知识学习网站里搭建知识框架。',
       '先调用 study_get_context 读取本站当前角色、学习方向和已保存目标。',
       `本次只为角色 ${roleName}（roleId=${roleId}）、方向 ${data.profile || data.profileId}（profileId=${data.profileId}）生成。`,
       '如果当前 roleId 或 profileId 与上面不一致，请让我切换后再继续，不要写入其他角色或方向。',

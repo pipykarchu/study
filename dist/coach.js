@@ -163,7 +163,7 @@
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),25000);
     try {
       const r = await fetch('/api/codex/session', {cache:'no-store',signal:controller.signal});
-      if (!r.ok) throw Error('请用“启动知芽”打开支持 Codex 的本机版。');
+      if (!r.ok) throw Error('请用“启动貅知识”打开支持 Codex 的本机版。');
       const saved = await r.json(); if (typeof saved.token !== 'string') throw Error('本机连接没有就绪，请重新启动本机版。'); token = saved.token;
       const health = await fetch('/api/codex/status', {cache:'no-store',signal:controller.signal});
       if (!health.ok) throw Error('本机 Codex 暂时没有响应，稍后再检查连接。'); status = await health.json();

@@ -1,4 +1,4 @@
-/* 练习参考题：按知芽当前学习骨架编写，并非视频原题，也不是能力证书。
+/* 练习参考题：按貅知识当前学习骨架编写，并非视频原题，也不是能力证书。
  * 本地进度只记录显式学习动作与答题证据，不会因为 AI 回复自动增加。
  * FDE 题按公开职责范围与工程常识编写，并非 OpenAI 官方试题：
  * https://openai.com/careers/forward-deployed-engineer-(fde)-seattle-seattle/
