@@ -111,7 +111,7 @@ async function identify(request, env) {
 }
 function roleStorageKey(id, url) {
   const values = url.searchParams.getAll('role');
-  if (values.length > 1 || values.length === 1 && !['apple', 'sheep'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择玉玺或小羊。');
+  if (values.length > 1 || values.length === 1 && !['apple', 'sheep'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择貔貅或小羊。');
   // Verified identity excludes control characters; this internal suffix cannot collide with a real user id.
   return values[0] === 'sheep' ? id + '\u001frole:sheep' : id;
 }
@@ -179,7 +179,8 @@ export default {
       if (!['GET', 'HEAD'].includes(request.method)) return json({code: 'method_not_allowed', error: '此页面仅支持浏览。'}, 405, {Allow: 'GET, HEAD'});
       const asset = STATIC_ASSETS[url.pathname === '/' ? '/index.html' : url.pathname];
       if (!asset) return new Response('页面不存在', {status: 404, headers: SECURITY_HEADERS});
-      return new Response(request.method === 'HEAD' ? null : asset.body, {headers: {...SECURITY_HEADERS, 'Content-Type': asset.type}});
+      const body = request.method === 'HEAD' ? null : asset.encoding === 'base64' ? Uint8Array.from(atob(asset.body), character => character.charCodeAt(0)) : asset.body;
+      return new Response(body, {headers: {...SECURITY_HEADERS, 'Content-Type': asset.type}});
     } catch (error) {
       if (error instanceof HttpError) return json({code: error.code, error: error.message}, error.status);
       // Do not disclose database details, identity headers, or learning records in errors.

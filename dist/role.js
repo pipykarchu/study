@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
   const roles = Object.freeze({
-    apple: Object.freeze({id: 'apple', name: '玉玺', avatar: '玺', description: '我的学习知识框架'}),
+    apple: Object.freeze({id: 'apple', name: '貔貅', avatar: '🐾', description: '我的学习知识框架'}),
     sheep: Object.freeze({id: 'sheep', name: '小羊', avatar: '🐑', description: '小羊的学习知识框架'})
   });
   const SESSION_KEY = 'study-bloom-active-role-v1';
@@ -26,7 +26,7 @@
     return url.pathname + url.search;
   }
   function urlFor(next) {
-    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择玉玺或小羊。');
+    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅或小羊。');
     const target = new global.URL(global.location.href);
     target.searchParams.set('role', next);
     return target.href;
@@ -48,7 +48,7 @@
     catch (_) { return false; }
   }
   async function choose(next) {
-    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择玉玺或小羊。');
+    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅或小羊。');
     if (busy) return false;
     if (next === id && explicit) { close(); return true; }
     busy = true;

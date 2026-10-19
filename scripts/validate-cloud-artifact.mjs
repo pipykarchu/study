@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile, readdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
-import {resolve} from 'node:path';
+import {resolve, extname} from 'node:path';
 import {createHash} from 'node:crypto';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -18,11 +18,16 @@ assert.equal(typeof worker?.fetch, 'function');
 const email = 'artifact-owner@example.test';
 const env = {STUDY_OWNER_EMAIL_SHA256: createHash('sha256').update(email).digest('hex')};
 const headers = {'oai-authenticated-user-id': 'artifact-owner', 'oai-authenticated-user-email': email};
-for (const path of ['index.html', 'styles.css', 'learning.js', 'coach.js', 'app.js']) {
+const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.webp': 'image/webp'};
+const assets = (await readdir(resolve(root, 'dist'), {withFileTypes: true})).filter(entry => entry.isFile() && !entry.name.startsWith('.') && types[extname(entry.name)]).map(entry => entry.name);
+assert.ok(assets.includes('index.html'));
+for (const path of assets) {
   const response = await worker.fetch(new Request('https://artifact.example.test/' + path, {headers}), env);
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), types[extname(path)], 'Wrong asset Content-Type: ' + path);
   const hash = value => createHash('sha256').update(value).digest('hex');
-  assert.equal(hash(await response.text()), hash(await readFile(resolve(root, 'dist', path), 'utf8')), 'Stale embedded asset: ' + path + '; rebuild the cloud Worker.');
+  assert.equal(hash(new Uint8Array(await response.arrayBuffer())), hash(await readFile(resolve(root, 'dist', path))), 'Stale embedded asset: ' + path + '; rebuild the cloud Worker.');
+  assert.equal((await worker.fetch(new Request('https://artifact.example.test/' + path), env)).status, 401, 'Anonymous asset access allowed: ' + path);
 }
 assert.equal((await worker.fetch(new Request('https://artifact.example.test/'), env)).status, 401);
 assert.equal(await readFile(resolve(root, 'drizzle/0000_study_state.sql'), 'utf8'), await readFile(resolve(root, 'migrations/0000_study_state.sql'), 'utf8'));

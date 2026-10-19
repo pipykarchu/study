@@ -56,7 +56,7 @@
     try {
       const saved=await window.StudySync.flush();
       if(!saved.cloudSaved)throw Error('云端尚未保存');
-      return {ok:true,result,roleId:window.StudyRole?.id||'apple',roleName:window.StudyRole?.name||'玉玺',cloudSaved:true,revision:window.StudySync.status().revision};
+      return {ok:true,result,roleId:window.StudyRole?.id||'apple',roleName:window.StudyRole?.name||'貔貅',cloudSaved:true,revision:window.StudySync.status().revision};
     } catch(error) {
       return {ok:false,savedLocally:true,cloudSaved:false,result,message:error.message||'网络中断，改动保留在本机，请先处理同步再继续。'};
     }
