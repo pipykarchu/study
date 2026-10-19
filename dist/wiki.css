@@ -1,0 +1,188 @@
+/* A small spatial Wiki, with real records rather than decorative progress. */
+.study-wiki { --wiki-stroke:#e6dfe8; --wiki-paper:#fffefb; --wiki-soft:#f5f0f7; max-width:1550px; margin:0 auto; }
+.wiki-header { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:23px; }
+.wiki-identity { display:flex; align-items:center; gap:15px; }
+.wiki-avatar { display:grid; place-items:center; width:68px; height:74px; flex:0 0 68px; font-size:49px; filter:drop-shadow(0 7px 5px #644a5620); }
+.wiki-avatar.is-pixiu { font-size:0; background:url('./pixiu.webp') center / contain no-repeat; }
+.wiki-eyebrow { display:block; color:#9b859d; font-size:9px; font-weight:650; letter-spacing:1.6px; line-height:1.6; }
+.wiki-header h1 { margin:3px 0 4px; font-size:28px; font-weight:620; letter-spacing:.3px; }
+.wiki-header p { color:#8b7c8f; font-size:12px; }
+.wiki-progress { display:flex; gap:22px; padding:12px 17px; color:#958998; font-size:10px; border-left:1px solid var(--wiki-stroke); }
+.wiki-progress span { display:grid; gap:2px; }
+.wiki-progress strong { color:#675173; font-size:19px; font-weight:560; }
+.wiki-directions { display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-bottom:15px; }
+.wiki-directions button { border:1px solid transparent; border-radius:10px; background:transparent; padding:8px 16px; color:#9a8c9d; font-size:12px; }
+.wiki-directions button.is-current { background:#f0e8f6; border-color:#e8dcf0; color:#77558f; font-weight:650; }
+.wiki-directions>span { margin-left:auto; font-size:10px; color:#a99bac; }
+.wiki-goal-bar { display:flex; align-items:center; gap:14px; padding:17px 21px; background:linear-gradient(110deg,#faf3f3,#f4f0f9); border:1px solid #eee3ec; border-radius:15px; }
+.wiki-goal-marker { font-size:30px; color:#bda1bb; }
+.wiki-goal-bar>div { min-width:0; flex:1; }
+.wiki-small-label { display:block; color:#ac8e9f; font-size:10px; letter-spacing:.4px; margin-bottom:4px; }
+.wiki-goal-bar h2 { font-size:15px; color:#705a77; line-height:1.6; overflow-wrap:anywhere; }
+.wiki-goal-bar p { margin-top:4px; color:#9b8c9c; font-size:11px; }
+.wiki-goal-bar>.text-button { flex-shrink:0; font-size:11px; }
+.wiki-goal-editor { margin:10px 0 19px; }
+.wiki-goal-editor>summary { width:fit-content; margin-left:14px; font-size:11px; color:#a38aa9; cursor:pointer; }
+.wiki-goal-editor[open] .study-planner { margin-top:12px; }
+.wiki-goal-editor .study-planner { box-shadow:none; }
+.wiki-workspace { display:grid; grid-template-columns:minmax(0,1.13fr) minmax(360px,1fr); gap:19px; align-items:start; }
+.wiki-map-card { border:1px solid #e8e0e6; border-radius:20px; overflow:hidden; background:linear-gradient(162deg,#fdfcfa 4%,#f3edf3 53%,#eee7ed 100%); box-shadow:0 9px 25px #5c40500a,inset 0 1px 0 #fff; }
+.wiki-map-heading { display:flex; align-items:center; justify-content:space-between; padding:23px 23px 0; gap:10px; }
+.wiki-map-heading h2 { font-size:15px; color:#6f5c75; margin-top:3px; }
+.wiki-map-scale { font-size:9px; color:#b39fae; white-space:nowrap; }
+.wiki-map-scene { position:relative; height:560px; isolation:isolate; }
+.wiki-map-horizon { position:absolute; z-index:-2; inset:7% -50% -22%; background:repeating-linear-gradient(0deg,transparent 0 54px,#bca7ba19 55px 56px),repeating-linear-gradient(90deg,transparent 0 54px,#bca7ba19 55px 56px); transform:perspective(700px) rotateX(58deg); mask-image:radial-gradient(ellipse,black,transparent 68%); }
+.wiki-map-lines { position:absolute; z-index:-1; width:100%; height:100%; inset:0; overflow:visible; }
+.wiki-map-ground { fill:#d9c9d124; stroke:#c6b4c41f; stroke-width:1; }
+.wiki-map-orbit { fill:none; stroke:#c4b0c33b; stroke-width:1.1; }
+.wiki-map-route { fill:none; stroke:url('#wiki-route'); stroke-width:2; stroke-dasharray:5 6; opacity:.7; }
+.wiki-map-center { position:absolute; left:50%; top:47%; transform:translate(-50%,-50%); display:grid; text-align:center; width:65%; pointer-events:none; color:#a38b9d; }
+.wiki-map-center strong { font-size:14px; font-weight:550; color:#8d748a; }
+.wiki-map-center small { font-size:8px; color:#b6a3b0; margin-top:3px; }
+.wiki-crystal { color:#c8adbf; font-size:35px; line-height:1.1; text-shadow:0 9px 8px #a484a127; }
+.wiki-node { position:absolute; z-index:1; left:var(--node-x); top:var(--node-y); transform:translate(-50%,-50%); display:flex; align-items:center; flex-direction:column; width:27%; min-height:145px; padding:18px 10px 12px; background:linear-gradient(140deg,#fffefa,#f6f1ef); border:1px solid #fefcfa; border-bottom:3px solid #d5c6cd; border-radius:14px 14px 11px 11px; color:#786776; box-shadow:0 13px 0 -5px #d8c9ce,0 18px 0 -8px #c8b6c080,0 25px 22px -8px #7158682e,inset 0 1px 1px #fff; transition:transform .18s,box-shadow .18s,border-color .18s; }
+.wiki-node:hover,.wiki-node:focus-visible { transform:translate(-50%,calc(-50% - 5px)); box-shadow:0 15px 0 -5px #d4c1d4,0 20px 0 -8px #c7b3cb80,0 30px 25px -8px #71586836; }
+.wiki-node.is-selected { background:linear-gradient(140deg,#fffdfd,#f1e8f5); border-color:#c8afdb; border-bottom-color:#ab8abb; box-shadow:0 13px 0 -5px #cbb2d8,0 18px 0 -8px #baa1c980,0 26px 24px -8px #70538136; }
+.wiki-node-number { position:absolute; top:8px; left:10px; color:#bba8b9; font-size:9px; font-family:ui-monospace,monospace; }
+.wiki-node-book { position:relative; width:35px; height:33px; margin:0 0 11px; background:linear-gradient(100deg,#b999c1 0 10%,#d7c1d8 11% 18%,#efe0ea 19%); border-radius:3px 5px 5px 3px; transform:perspective(160px) rotateY(-25deg) rotateZ(-7deg); box-shadow:3px 4px 0 #ba9ab780,5px 7px 7px #88617f24,inset -2px 0 #f9f0f7; }
+.wiki-node-book:before { content:''; position:absolute; right:5px; left:10px; top:9px; height:1px; background:#c3a4bd; box-shadow:0 4px #c3a4bd,0 8px #c3a4bd; }
+.wiki-node:nth-of-type(2n) .wiki-node-book { background:linear-gradient(100deg,#bd9b9b 0 10%,#dec3c1 11% 18%,#f3e3d9 19%); }
+.wiki-node strong { font-size:12px; font-weight:620; line-height:1.5; min-height:36px; display:grid; place-items:center; overflow-wrap:anywhere; }
+.wiki-node-status { display:flex; align-items:center; gap:5px; font-size:8px; margin-top:9px; color:#ac95a9; }
+.wiki-node.is-recorded .wiki-node-status { color:#77977e; }
+.wiki-map-legend { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 19px 19px; color:#a491a2; font-size:9px; }
+.wiki-map-legend span { display:flex; align-items:center; gap:6px; }
+.wiki-map-legend i { display:inline-block; height:0; width:17px; border-top:2px dashed #bea6c3; }
+.wiki-workbench { min-width:0; border:1px solid var(--wiki-stroke); border-radius:19px; background:#fffdfd; box-shadow:0 10px 26px #62495908; }
+.wiki-workbench-top { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:18px 20px 13px; }
+.wiki-workbench-top strong { color:#b39aac; font-size:10px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:45%; }
+.wiki-pane-tabs { display:flex; gap:4px; padding:0 13px; border-bottom:1px solid #eee6ee; }
+.wiki-pane-tabs>button { flex:1; border:0; background:transparent; color:#ab9baa; padding:12px 5px; border-bottom:2px solid transparent; font-size:11px; }
+.wiki-pane-tabs>button.is-active { color:#865fa0; font-weight:650; border-bottom-color:#b697cc; }
+.wiki-panel { padding:23px 23px 22px; min-height:547px; max-height:770px; overflow:auto; scrollbar-width:thin; scrollbar-color:#e1d4e4 transparent; }
+.wiki-page-heading { display:flex; justify-content:space-between; align-items:center; color:#ac9baa; font-size:9px; margin-bottom:14px; }
+.wiki-paper-tag { padding:3px 7px; background:#f1eaf6; color:#ad8fbb; border-radius:5px; font-size:8px; letter-spacing:1px; }
+.wiki-node-page h3 { font-size:21px; font-weight:600; line-height:1.5; margin-bottom:11px; }
+.wiki-node-description { color:#948496; line-height:1.95; font-size:12px; white-space:pre-wrap; }
+.wiki-practice-card { padding:15px 16px; background:#f9f3f2; border-left:2px solid #dfc1c9; border-radius:3px 10px 10px 3px; margin:20px 0 16px; }
+.wiki-practice-card p,.wiki-acceptance p { font-size:12px; color:#8a778c; line-height:1.85; white-space:pre-wrap; }
+.wiki-acceptance { padding:0 3px; margin-bottom:20px; }
+.wiki-pane-actions,.wiki-note-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:13px 0 17px; }
+.wiki-pane-actions .button,.wiki-note-actions .button { font-size:10px; padding:8px 12px; min-height:34px; }
+.wiki-node-page form { padding-top:18px; margin-top:20px; border-top:1px solid #eee6ee; }
+.wiki-panel .field { font-size:11px; color:#9a8399; gap:7px; }
+.wiki-panel .field textarea,.wiki-panel .field input,.wiki-panel .field select { font-size:11px; border-color:#e8dfea; border-radius:9px; background:#fdfbfd; padding:10px 11px; color:#705f79; }
+.wiki-panel textarea { line-height:1.9; resize:vertical; }
+.wiki-note-actions { margin-bottom:10px; justify-content:space-between; }
+.wiki-note-actions .text-button { font-size:10px; }
+.wiki-small-print { font-size:9px; line-height:1.9; color:#ad9bae; }
+.wiki-inline-message,.wiki-ima-message { margin-top:11px; color:#8b7599; font-size:11px; line-height:1.8; }
+.wiki-inline-message.is-error,.wiki-ima-message.is-error { color:#b26c7b; }
+.wiki-boundaries { padding:16px 20px; margin:19px 0 15px; border:1px solid #ebe3e9; border-radius:13px; background:#fffdfc; }
+.wiki-boundaries>summary { cursor:pointer; color:#8d738f; font-size:11px; font-weight:600; }
+.wiki-boundaries>summary>span { margin-left:11px; color:#b09caf; font-size:10px; font-weight:400; }
+.wiki-boundary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; margin:19px 0; }
+.wiki-boundary-grid h3 { color:#9a7f9e; font-size:11px; }
+.wiki-boundary-grid ul { margin:8px 0 0; padding-left:15px; color:#9b8b9e; font-size:11px; }
+.wiki-method { border:1px solid #e9e1ec; border-radius:14px; background:linear-gradient(110deg,#f9f5fb,#fbf6f7); padding:18px 19px 13px; }
+.wiki-method-label { display:flex; align-items:center; gap:15px; margin-bottom:13px; }
+.wiki-method-label strong { color:#8c6f9b; font-size:11px; }
+.wiki-method-label>span { color:#b09eb5; font-size:10px; }
+.wiki-method ol { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+.wiki-method li { min-width:0; }
+.wiki-method li button { display:flex; align-items:center; gap:7px; width:100%; text-align:left; font-size:10px; padding:6px 3px; border:0; background:transparent; color:#aa99b1; }
+.wiki-method li button>span { display:grid; place-items:center; flex:0 0 21px; width:21px; height:21px; border-radius:50%; border:1px solid #e5d9e9; color:#bda7c8; font-size:9px; }
+.wiki-method li button.is-current { color:#866197; font-weight:650; }
+.wiki-method li button.is-current>span { background:#b89aca; color:#fff; border-color:#b89aca; }
+.wiki-method li button.is-done>span { background:#e3eee5; color:#7e9983; border-color:#dce9df; }
+.wiki-method>p { font-size:8px; color:#b5a4b8; margin-top:9px; }
+.wiki-library-heading { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+.wiki-library-heading h3 { font-size:15px; color:#816a86; }
+.wiki-library-heading p { color:#b3a1b2; font-size:10px; margin-top:5px; }
+.wiki-library-heading>.button { font-size:10px; white-space:nowrap; }
+.wiki-library-search { margin:17px 0; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.wiki-library-search .search-field { flex:1; min-width:170px; padding:0 10px; gap:8px; font-size:13px; color:#b497bd; }
+.wiki-library-search .search-field input { font-size:10px; min-width:0; width:100%; }
+.wiki-node-filter { display:flex; align-items:center; gap:5px; color:#aa93ac; font-size:9px; white-space:nowrap; }
+.wiki-node-filter input { accent-color:#a382bd; }
+.wiki-material-form { border:1px solid #e6d9eb; border-radius:12px; background:#faf6fb; padding:15px; margin-bottom:18px; }
+.wiki-material-form h4 { font-size:12px; color:#8e6b9b; margin-bottom:13px; }
+.wiki-material-form>.field { margin-bottom:13px; }
+.wiki-form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:13px; }
+.wiki-file-input { position:relative; display:inline-flex; align-items:center; border:1px dashed #d6bfdc; padding:5px 9px; border-radius:6px; font-size:10px; color:#9b78ab; overflow:hidden; cursor:pointer; margin-bottom:8px; }
+.wiki-file-input input { position:absolute; inset:0; opacity:0; width:100%; cursor:pointer; }
+.wiki-file-input+.wiki-small-print { display:block; }
+.wiki-material-card { border:1px solid #ece3e9; background:#fffefc; padding:14px 15px; border-radius:11px; margin-bottom:11px; }
+.wiki-material-meta { display:flex; justify-content:space-between; gap:8px; font-size:8px; color:#b7a4b2; margin-bottom:7px; }
+.wiki-material-card h4 { color:#89718e; font-size:13px; overflow-wrap:anywhere; }
+.wiki-material-excerpt { color:#ab96a9; font-size:10px; line-height:1.8; margin-top:8px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.wiki-material-content { margin-top:9px; color:#a58aaf; font-size:10px; }
+.wiki-material-content summary { cursor:pointer; }
+.wiki-material-content>div { white-space:pre-wrap; overflow-wrap:anywhere; margin-top:10px; color:#948098; padding:10px; background:#faf6fa; max-height:350px; overflow:auto; }
+.wiki-material-actions { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; padding-top:8px; border-top:1px solid #f3ebf0; }
+.wiki-material-card .text-button { font-size:9px; }
+.wiki-remove-confirm { margin-top:10px; padding:8px; background:#fff0f1; color:#b57a88; border-radius:6px; font-size:10px; }
+.wiki-remove-confirm>span { display:block; margin-bottom:4px; }
+.wiki-remove-confirm>.text-button { margin-right:15px; }
+.wiki-empty { text-align:center; padding:36px 18px; color:#b19eb2; font-size:11px; }
+.wiki-empty>span { display:block; color:#d1bfd7; font-size:35px; margin-bottom:5px; }
+.wiki-empty>strong { display:block; font-size:12px; color:#a68bab; font-weight:500; }
+.wiki-empty>p { line-height:1.9; margin-top:7px; font-size:10px; }
+.wiki-ima { border:1px solid #e3e7e2; border-radius:12px; padding:16px; margin-top:22px; background:linear-gradient(130deg,#fafbf8,#f8f7fb); }
+.wiki-ima-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
+.wiki-ima-heading h4 { color:#8a8f7d; font-size:12px; }
+.wiki-ima .wiki-small-label { color:#9ea18e; }
+.wiki-status-dot { color:#a6a293; font-size:8px; white-space:nowrap; }
+.wiki-status-dot:before { content:''; display:inline-block; width:5px; height:5px; margin-right:4px; background:#d6c6a9; border-radius:50%; }
+.wiki-status-dot.is-ready:before { background:#a2bc9f; }
+.wiki-ima>.field { margin-top:12px; }
+.wiki-ima>.wiki-pane-actions { margin:9px 0; }
+.wiki-ima .text-button { font-size:9px; }
+.wiki-ima-search { display:flex; align-items:center; gap:7px; margin-top:13px; }
+.wiki-ima-search input { width:100%; min-width:0; border:1px solid #e0dbe7; border-radius:7px; padding:8px; color:#8b7899; font-size:10px; background:#fff; }
+.wiki-ima-search button { flex-shrink:0; font-size:9px; padding:7px 9px; }
+.wiki-ima-message { font-size:10px; }
+.wiki-ima-results details { padding:10px 0; border-bottom:1px solid #e7e8e3; color:#8d9785; font-size:10px; }
+.wiki-ima-results summary { cursor:pointer; }
+.wiki-ima-results p { white-space:pre-wrap; overflow-wrap:anywhere; max-height:250px; overflow:auto; color:#a0a792; margin-top:8px; }
+.wiki-ima-preview { background:#fff; border:1px solid #dfe5d8; border-radius:9px; padding:12px; margin-top:13px; }
+.wiki-ima-preview h4 { font-size:11px; color:#8a977c; margin-bottom:7px; }
+.wiki-ima-preview>strong { display:block; margin-top:9px; color:#8a7b90; font-size:11px; }
+.wiki-ima-preview pre { white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:10px; line-height:1.8; color:#ab9aaf; max-height:190px; overflow:auto; padding:8px; background:#fbf9fb; }
+.wiki-data-settings { margin-top:18px; padding-top:13px; border-top:1px solid #ece3ed; }
+.wiki-data-settings>summary { cursor:pointer; font-size:10px; color:#a78db0; }
+.wiki-data-settings>p { margin-top:10px; }
+.wiki-panel .coach-embedded { min-width:0; }
+.wiki-panel .coach-embedded .coach-messages { min-height:160px; max-height:340px; }
+.wiki-panel .coach-embedded .coach-mode-tabs button { font-size:10px; padding:10px 5px; }
+.wiki-panel .coach-embedded .coach-composer textarea { font-size:11px; }
+@media(min-width:1450px){ .wiki-map-scene { height:620px; } .wiki-panel { min-height:607px; max-height:830px; } .wiki-node { min-height:165px; } .wiki-node strong { font-size:14px; } .wiki-node-book { width:40px; height:38px; margin-bottom:14px; } }
+@media(max-width:1180px){ .wiki-workspace { grid-template-columns:minmax(0,1fr) minmax(340px,.94fr); gap:13px; } .wiki-panel { padding:18px 17px; } .wiki-map-heading { padding:20px 17px 0; } .wiki-map-heading h2 { font-size:13px; } .wiki-map-scene { height:535px; } .wiki-node { padding:17px 7px 10px; min-height:143px; width:28%; } .wiki-node strong { font-size:11px; } .wiki-map-legend { font-size:8px; gap:7px; padding:0 12px 16px; } .wiki-method li button { font-size:9px; gap:5px; } .wiki-directions>span { display:none; } }
+@media(max-width:1000px){ .wiki-workspace { grid-template-columns:minmax(0,1fr); } .wiki-map-scene { height:480px; } .wiki-node { width:25%; min-height:130px; } .wiki-node strong { font-size:13px; min-height:23px; } .wiki-node-book { width:31px; height:29px; margin-bottom:8px; } .wiki-node-status { margin-top:5px; } .wiki-panel { min-height:400px; max-height:none; } .wiki-method ol { grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; } .wiki-workbench-top strong { max-width:60%; } .wiki-progress { gap:12px; } }
+@media(max-width:600px){ .wiki-header { gap:10px; margin-bottom:16px; } .wiki-avatar { width:48px; height:55px; flex-basis:48px; font-size:38px; } .wiki-identity { gap:9px; } .wiki-header h1 { font-size:21px; } .wiki-header p { font-size:10px; } .wiki-header .wiki-eyebrow { font-size:7px; letter-spacing:1px; } .wiki-progress { display:none; } .wiki-directions { gap:3px; margin-bottom:12px; } .wiki-directions button { font-size:10px; padding:7px 11px; } .wiki-goal-bar { padding:13px 14px; gap:9px; border-radius:12px; align-items:start; } .wiki-goal-marker { font-size:23px; } .wiki-goal-bar h2 { font-size:12px; } .wiki-goal-bar p { font-size:9px; } .wiki-goal-bar p>span { display:none; } .wiki-goal-bar>.text-button { font-size:9px; padding-top:6px; } .wiki-goal-editor>summary { font-size:10px; margin-left:5px; } .wiki-map-heading { padding:17px 13px 0; } .wiki-map-heading h2 { font-size:12px; } .wiki-map-scale { font-size:8px; } .wiki-map-scene { height:450px; } .wiki-node { width:28%; min-height:140px; padding:18px 6px 10px; border-radius:11px; } .wiki-node strong { font-size:10px; min-height:43px; } .wiki-node-status { font-size:7px; } .wiki-node-book { width:28px; height:27px; } .wiki-map-center { top:47%; } .wiki-map-center strong { font-size:12px; } .wiki-map-center small { font-size:7px; } .wiki-crystal { font-size:28px; } .wiki-map-legend { flex-wrap:wrap; font-size:8px; padding-bottom:14px; } .wiki-map-legend>span+span { margin-left:auto; } .wiki-node-page h3 { font-size:19px; } .wiki-node-description,.wiki-practice-card p,.wiki-acceptance p { font-size:11px; } .wiki-pane-tabs>button { font-size:11px; } .wiki-boundaries { padding:13px 15px; } .wiki-boundaries>summary>span { display:block; margin:4px 0 0 15px; font-size:9px; } .wiki-boundary-grid { grid-template-columns:1fr; gap:14px; } .wiki-method { padding:14px; } .wiki-method-label { display:block; } .wiki-method-label>span { display:block; font-size:9px; margin-top:3px; } .wiki-method ol { grid-template-columns:repeat(3,minmax(0,1fr)); } .wiki-library-heading h3 { font-size:13px; } .wiki-form-row { grid-template-columns:1fr; } .wiki-material-meta { flex-wrap:wrap; } }
+@media(prefers-reduced-motion:reduce){ .wiki-node { transition:none; } }
+
+/* Chinese reading and controls stay legible at ordinary display scaling. */
+.wiki-header p,.wiki-directions button,.wiki-directions>span,.wiki-goal-bar p,.wiki-goal-bar>.text-button,.wiki-goal-editor>summary,.wiki-map-scale,.wiki-map-legend,.wiki-node-status,.wiki-workbench-top strong,.wiki-pane-tabs>button,.wiki-page-heading,.wiki-note-actions .text-button,.wiki-panel .field,.wiki-panel .field textarea,.wiki-panel .field input,.wiki-panel .field select,.wiki-small-print,.wiki-boundaries>summary,.wiki-boundaries>summary>span,.wiki-boundary-grid h3,.wiki-boundary-grid ul,.wiki-method-label strong,.wiki-method-label>span,.wiki-method li button,.wiki-method>p,.wiki-library-heading p,.wiki-library-heading>.button,.wiki-library-search .search-field input,.wiki-node-filter,.wiki-material-form h4,.wiki-file-input,.wiki-material-meta,.wiki-material-excerpt,.wiki-material-content,.wiki-material-card .text-button,.wiki-remove-confirm,.wiki-ima-heading h4,.wiki-status-dot,.wiki-ima .text-button,.wiki-ima-search input,.wiki-ima-search button,.wiki-ima-message,.wiki-ima-results details,.wiki-ima-preview h4,.wiki-ima-preview>strong,.wiki-ima-preview pre,.wiki-data-settings>summary { font-size:12px; }
+.wiki-goal-bar h2,.wiki-node-description,.wiki-practice-card p,.wiki-acceptance p,.wiki-material-card h4,.wiki-material-content>div,.wiki-ima-results p { font-size:13px; }
+.wiki-small-label { font-size:12px; }
+.wiki-node strong { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; max-height:4.5em; font-size:13px; min-height:39px; }
+.wiki-node { min-height:174px; }
+.wiki-node-number { font-size:11px; }
+.wiki-node-status { line-height:1.5; text-align:center; }
+.wiki-map-center small { font-size:11px; }
+.wiki-pane-actions .button,.wiki-note-actions .button { font-size:12px; }
+.wiki-map-scene { min-height:560px; }
+.wiki-method ol { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.wiki-method-label { flex-wrap:wrap; gap:5px 15px; }
+.wiki-material-meta { flex-wrap:wrap; }
+.wiki-library-search .search-field { min-width:180px; }
+.wiki-status-dot { display:flex; align-items:center; }
+.wiki-workbench-top .wiki-eyebrow { max-width:55%; }
+.wiki-map-legend { flex-wrap:wrap; }
+.wiki-empty,.wiki-empty>p { font-size:12px; }
+.wiki-empty>strong { font-size:13px; }
+.wiki-panel .coach-embedded .coach-mode-tabs button,.wiki-panel .coach-embedded .coach-composer textarea { font-size:12px; }
+@media(max-width:1180px){ .wiki-node { min-height:182px; } .wiki-node strong { font-size:12px; } .wiki-node-status { font-size:11px; } .wiki-map-scene { min-height:570px; } .wiki-map-heading { align-items:start; } .wiki-map-scale { max-width:70px; white-space:normal; text-align:right; } }
+@media(max-width:1000px){ .wiki-map-scene { min-height:530px; } .wiki-node { min-height:166px; } .wiki-node-status { font-size:12px; } .wiki-node strong { font-size:13px; } }
+@media(max-width:600px){ .wiki-map-scene { min-height:540px; } .wiki-node { min-height:176px; padding:20px 6px 10px; } .wiki-node strong { font-size:12px; min-height:54px; } .wiki-node-status { font-size:11px; display:block; } .wiki-node-status>span { display:none; } .wiki-map-center small { display:none; } .wiki-map-center strong { font-size:12px; } .wiki-map-heading h2 { font-size:13px; } .wiki-map-legend { font-size:12px; } .wiki-goal-bar>.text-button { font-size:12px; } .wiki-directions button { font-size:12px; padding:8px 10px; } .wiki-method ol { grid-template-columns:repeat(2,minmax(0,1fr)); } .wiki-boundaries>summary>span { font-size:12px; } .wiki-library-heading h3 { font-size:14px; } .wiki-header p { font-size:12px; } .wiki-workbench-top { align-items:start; } }

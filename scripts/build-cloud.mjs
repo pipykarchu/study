@@ -12,6 +12,7 @@ vm.runInNewContext(await readFile(resolve(root, 'dist/learning-tool-defs.js'), '
 const bridgeTools = toolContext.StudyToolDefinitions.filter(tool => tool.name !== 'study_select_profile');
 if (bridgeTools.length !== 9) throw new Error('Expected nine bounded membership learning tools.');
 const bridge = (await readFile(resolve(root, 'worker/membership.js'), 'utf8')).replace('/*__BRIDGE_TOOL_DEFINITIONS__*/', () => 'const BRIDGE_TOOL_DEFINITIONS = ' + JSON.stringify(bridgeTools) + ';');
+const ima = await readFile(resolve(root, 'worker/ima.js'), 'utf8');
 const learning = await readFile(resolve(root, 'dist/learning.js'), 'utf8');
 if (!learning.includes('})(window);')) throw new Error('Learning validator source changed; review the cloud validator wrapper.');
 const validator = `function validateLearningSnapshot(raw) {\nconst window = {localStorage: {getItem() {return null;}, setItem() {}}, dispatchEvent() {}, CustomEvent: class {constructor() {}}};\n${learning}\nwindow.StudyLearning.importData(raw);\nreturn window.StudyLearning.exportData();\n}`;
@@ -26,7 +27,7 @@ for (const entry of (await readdir(resolve(root, 'dist'), {withFileTypes: true})
   assets['/' + entry.name] = {body: body.toString(binary ? 'base64' : 'utf8'), type: types[extension], ...(binary ? {encoding: 'base64'} : {})};
 }
 if (!assets['/index.html']) throw new Error('Missing learning website index.html.');
-const output = worker.replace('/*__LEARNING_VALIDATOR__*/', () => validator).replace('/*__MEMBERSHIP_BRIDGE__*/', () => bridge).replace('/*__STATIC_ASSETS__*/', () => 'const STATIC_ASSETS = ' + JSON.stringify(assets) + ';');
+const output = worker.replace('/*__LEARNING_VALIDATOR__*/', () => validator).replace('/*__MEMBERSHIP_BRIDGE__*/', () => bridge).replace('/*__IMA_CONNECTOR__*/', () => ima).replace('/*__STATIC_ASSETS__*/', () => 'const STATIC_ASSETS = ' + JSON.stringify(assets) + ';');
 await mkdir(resolve(root, 'dist/server'), {recursive: true});
 await mkdir(resolve(root, 'dist/.openai'), {recursive: true});
 await writeFile(resolve(root, 'dist/server/index.js'), output);

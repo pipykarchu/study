@@ -7,7 +7,7 @@
   const APP_KEY = roleKey('study-bloom-v1');
   const LEARNING_KEY = roleKey('study-bloom-learning-v2');
   const ENDPOINT = global.StudyRole?.endpoint('/api/study/state') || '/api/study/state';
-  const SITE = 'https://study-bloom.yellow-spool-5033.chatgpt.site/#coach';
+  const SITE = 'https://study-bloom.yellow-spool-5033.chatgpt.site/#garden';
   const host = global.location.hostname.toLowerCase();
   const localOnly = host === 'localhost' || host.endsWith('.localhost') || /^127\./.test(host) || host === '[::1]' || host === '::1' || !/^https?:$/.test(global.location.protocol);
   const clone = value => JSON.parse(JSON.stringify(value));
@@ -37,7 +37,7 @@
     const a = data.app;
     if (a.profile !== 'product' || a.minutes !== 45 || a.day !== 0) return true;
     if (a.timer && (a.timer.remaining !== 1500 || a.timer.deadline)) return true;
-    if (['goals', 'completed', 'tasks', 'notes', 'reviews', 'projectTasks', 'boundaries'].some(key => a[key] && Object.keys(a[key]).length > 0)) return true;
+    if (['goals', 'completed', 'tasks', 'notes', 'reviews', 'projectTasks', 'boundaries', 'frameworks', 'materials', 'imaTargets'].some(key => a[key] && Object.keys(a[key]).length > 0)) return true;
     return Object.values(data.learning.profiles || {}).some(p => p.stage !== 'frame' || p.completedStages.length || p.recentEvidence.length || p.quiz.active || p.quiz.attempts.length);
   }
   function readMeta() {

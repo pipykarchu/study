@@ -33,7 +33,7 @@ const profiles = {
     boundaries:{must:['说清这次学习的用途和目标水平','掌握最常用的概念与基础操作','通过一个练习或作品证明会用'],optional:['了解常见进阶路线和替代方法'],later:['与当前成果无关的支线知识','还没有应用场景的高阶细节']},
     nodes:[['定义问题','为什么学，学来做什么','写一个真实使用场景和完成标准。','能说明学习前后具体有什么变化。','target'],['概念骨架','找出最常用的核心概念','列出 5–8 个核心概念与它们的关系。','不看资料画出一张知识地图。','map'],['最小练习','每个概念配一次动手','选 3 个高频任务，从最简单的做起。','不用照抄完成一个基础练习。','book'],['反馈纠错','找到盲区再修正','让 AI 逐题提问，记录错因和修正。','换一个例子仍然能做对。','spark'],['项目迁移','把知识放回真实场景','完成一个和自己目标相关的小作品。','用事先写下的标准验收作品。','project'],['复述与速查','讲得清，也找得到','用自己的话讲解，整理一页速查表。','3 分钟讲清原理、例子与适用边界。','garden']]}
 };
-const pages=[['garden','学习花园','garden'],['framework','知识框架','map'],['session','今日学习','book'],['coach','对话学习','spark'],['projects','项目练习','project'],['method','学习方法','spark'],['resources','资料与备份','shelf']];
+const pages=[['garden','知识图谱','map'],['framework','知识框架','map'],['session','今日学习','book'],['coach','对话学习','spark'],['projects','项目练习','project'],['method','十倍学习方法','spark'],['resources','资料沉淀','shelf']];
 const methods=[
   ['画知识阶梯','把知识分成五级','认识概念 → 解释原理 → 独立应用 → 排查错误 → 迁移创造。每级都配一个练习和过关标准。'],
   ['抓核心、分小段','减少输入，增加练习','围绕目标选择最有用的知识，分成 10 次学习。公开方法以每次 2 小时为例；在这里可以按自己的时间调整。'],
@@ -48,7 +48,7 @@ const resources=[
   {title:'study · 你的学习网站',kind:'我的 GitHub 项目',desc:'保存貅知识网站源码，持续积累学习框架与项目实践。',url:'https://github.com/pipykarchu/study',emoji:'⌘'},
   {title:'bili-learn · 视频学习助手',kind:'我的 GitHub 项目',desc:'把视频学习与笔记、纲要和知识整理连接起来，可作为学习产品实践对象。',url:'https://github.com/pipykarchu/bili-learn',emoji:'▹'}
 ];
-function freshState(){return {version:1,profile:'product',goals:{},completed:{},tasks:{},notes:{},reviews:[],projectTasks:{},boundaries:{},frameworks:{},minutes:45,day:0,timer:{remaining:1500,deadline:null}};}
+function freshState(){return {version:1,profile:'product',goals:{},completed:{},tasks:{},notes:{},reviews:[],projectTasks:{},boundaries:{},frameworks:{},materials:[],imaTargets:{},minutes:45,day:0,timer:{remaining:1500,deadline:null}};}
 const STORAGE=window.StudyRole?.storageKey('study-bloom-v1')||'study-bloom-v1';
 function activeScope(){return {roleId:window.StudyRole?.id||'apple',profileId:state.profile};}
 function requireScope(expected){if(window.StudyRole?.isSwitching?.()||expected.roleId!==(window.StudyRole?.id||'apple')||expected.profileId!==undefined&&expected.profileId!==state.profile)throw Error('角色或学习方向已变化，请重新打开后再保存。');}
@@ -59,6 +59,28 @@ function validateFramework(raw){
   const limits=[120,500,2000,2000,30];
   const nodes=raw.nodes.map(n=>{if(!Array.isArray(n)||n.length!==5||n.some((v,i)=>typeof v!=='string'||!v.trim()||v.length>limits[i])||!Object.hasOwn(icons,n[4]))throw Error('知识节点格式有误');return n.map(v=>v.trim());});
   return {nodes,summary:raw.summary,updatedAt:raw.updatedAt};
+}
+function validateMaterials(items){
+  if(!Array.isArray(items)||items.length>80)throw Error('资料库最多保存80份资料，请先导出整理');
+  const ids=new Set(), fields=['id','profileId','nodeIndex','type','title','content','url','createdAt','updatedAt'];
+  return items.map(m=>{
+    if(!m||typeof m!=='object'||Array.isArray(m)||Object.keys(m).sort().join(',')!==fields.slice().sort().join(',')||typeof m.id!=='string'||!/^mat-[A-Za-z0-9_-]{1,70}$/.test(m.id)||ids.has(m.id)||!Object.hasOwn(profiles,m.profileId)||!(m.nodeIndex===null||Number.isInteger(m.nodeIndex)&&m.nodeIndex>=0&&m.nodeIndex<6)||!['note','link','file'].includes(m.type))throw Error('资料记录格式有误');
+    for(const [key,max]of [['title',300],['content',10000],['url',2000]])if(typeof m[key]!=='string'||m[key].length>max)throw Error('资料标题、正文或链接过长');
+    if(!m.title.trim()||!(m.content.trim()||m.url))throw Error('请填写资料标题和正文或链接');
+    if(m.url){let u;try{u=new URL(m.url);}catch{throw Error('请填写有效的网页链接');}if(!['https:','http:'].includes(u.protocol)||u.username||u.password)throw Error('资料只支持不含密码的 HTTP 或 HTTPS 链接');}
+    if(m.type==='link'&&!m.url)throw Error('链接资料需要填写网址');
+    if(!['createdAt','updatedAt'].every(k=>Number.isSafeInteger(m[k])&&m[k]>=0&&m[k]<=8640000000000000)||m.updatedAt<m.createdAt)throw Error('资料时间有误');
+    ids.add(m.id);return {...m};
+  });
+}
+function ensureMaterialCapacity(materials){
+  const text=JSON.stringify({app:{...state,materials},learning:window.StudyLearning?.exportData?.()||{}});
+  let size=0;for(const char of text){const cp=char.codePointAt(0);size+=cp<128?1:cp<2048?2:cp<65536?3:4;}
+  if(size>1950000)throw Error('学习记录接近云端容量，请先导出并整理旧资料后再保存。本次内容尚未写入。');
+}
+function validateImaTargets(raw){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).some(k=>!Object.hasOwn(profiles,k)))throw Error('ima知识库设置有误');
+  const clean={};for(const [id,v]of Object.entries(raw)){if(!v||typeof v!=='object'||Object.keys(v).sort().join(',')!=='id,name'||typeof v.id!=='string'||!v.id.trim()||v.id.length>500||typeof v.name!=='string'||v.name.length>300)throw Error('ima知识库设置有误');clean[id]={id:v.id,name:v.name};}return clean;
 }
 function validateState(data){
   if(!data || data.version!==1 || !Object.hasOwn(profiles,data.profile))throw Error('不支持的备份格式');
@@ -72,6 +94,8 @@ function validateState(data){
     }
   }
   if(data.frameworks!==undefined){if(!data.frameworks||typeof data.frameworks!=='object'||Array.isArray(data.frameworks)||Object.keys(data.frameworks).some(k=>!Object.hasOwn(profiles,k)))throw Error('知识框架方向有误');for(const [key,value] of Object.entries(data.frameworks))next.frameworks[key]=validateFramework(value);}
+  if(data.materials!==undefined)next.materials=validateMaterials(data.materials);
+  if(data.imaTargets!==undefined)next.imaTargets=validateImaTargets(data.imaTargets);
   next.minutes=Number.isFinite(data.minutes)?Math.max(15,Math.min(180,Math.round(data.minutes))):45;
   next.day=Number.isInteger(data.day)?Math.max(0,Math.min(9,data.day)):0;
   next.reviews=Array.isArray(data.reviews)?data.reviews.filter(r=>r&&typeof r.date==='string'&&typeof r.text==='string'&&Object.hasOwn(profiles,r.profile)).slice(-100).map(r=>({date:r.date.slice(0,40),text:r.text.slice(0,3000),profile:r.profile})):[];
@@ -90,7 +114,7 @@ const currentNode=()=>Math.max(0,profile().nodes.findIndex((_,i)=>!state.complet
 const scope=()=>state.boundaries[state.profile]||profile().boundaries;
 const taskKey=i=>`${state.profile}-${state.day}-${i}`;
 const sessionNames=['画出知识框架与边界','讲清最核心的概念','完成第一个最小练习','把操作拆成稳定步骤','练一次常见失败场景','用测验找理解漏洞','做出项目的最小版本','用案例检验项目表现','整理一页速查表','演示作品并复盘'];
-function page(){const hash=location.hash.slice(1);return pages.some(p=>p[0]===hash)?hash:'coach';}
+function page(){const hash=location.hash.slice(1);return pages.some(p=>p[0]===hash)?hash:'garden';}
 function navigate(name){if(page()===name)render();else location.hash=name;window.scrollTo(0,0);}
 function heading(eyebrow,title,desc,actions=''){return `<section class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p class="heading-description">${desc}</p></div><div class="heading-actions">${actions}</div></section>`;}
 function profileTabs(){return `<div class="track-tabs" role="group" aria-label="选择学习方向">${Object.entries(profiles).map(([key,p])=>`<button class="track-tab ${key===state.profile?'active':''}" data-action="profile" data-id="${key}" aria-pressed="${key===state.profile}">${key==='product'?'✦':key==='coding'?'⌘':'＋'} ${p.name}</button>`).join('')}</div>`;}
@@ -128,7 +152,8 @@ function methodPage(){return heading('A KINDER WAY TO LEARN','给学习，一条
 function resourcePage(){const found=resources.filter(r=>(r.title+r.kind+r.desc).toLowerCase().includes(resourceQuery.toLowerCase()));return heading('A SMALL, USEFUL BOOKSHELF','资料少一点，用得深一点','每份资料，都对应一个问题或一次练习。')+`<section class="panel"><div class="panel-heading"><h2>学习资料架</h2><label class="search-field">${icon('book')}<input type="search" id="resource-search" aria-label="搜索学习资料" value="${esc(resourceQuery)}" placeholder="搜索资料、项目、方法"></label></div><div id="resource-results">${resourceCards(found)}</div></section><section class="panel"><div class="panel-heading"><div><h2>自己的笔记，好好保存</h2><p class="panel-subtitle">记录先保留在本机，连接成功后同步到私人云端。换电脑登录同一账号即可恢复；左下角显示同步状态，离线时请先备份。</p></div><span class="tag">${storageReady?'本地保存':'保存不可用'}</span></div><div class="export-actions"><button class="button primary" data-action="export-json">${icon('download')} 导出完整备份</button><button class="button secondary" data-action="import">导入备份</button><button class="button secondary" data-action="export-md">导出 Markdown 框架</button></div><p class="source-note">完整备份为 JSON，包含你写下的内容。导入会替换学习记录，联网后同步到私人云端。</p></section><section class="panel"><h3>关于本地课程</h3><p class="panel-subtitle">你的本机已有 AI 产品、编程和大模型学习材料。本站先把学习框架搭好，课程文件仍保留在本机，未上传到公开仓库。</p><button class="text-button danger" data-action="reset-data">清空学习记录</button></section>`;}
 function resourceCards(list){return list.length?list.map(r=>`<article class="resource-detail"><span class="resource-icon">${r.emoji}</span><div><span class="tag">${r.kind}</span><h3><a href="${r.url}" target="_blank" rel="noopener noreferrer">${r.title} ↗</a></h3><p>${r.desc}</p></div></article>`).join(''):'<p class="empty-state">没有找到相关资料，换个关键词试试。</p>';}
 function coachPage(){const g=goal();return window.studyCoach.render({roleId:window.StudyRole?.id||'apple',roleName:window.StudyRole?.name||'貔貅',roleAvatar:window.StudyRole?.avatar||'🐾',profileId:state.profile,profile:profile().name,goal:g.goal,why:g.why,outcome:g.outcome,minutes:state.minutes,boundaries:scope(),nodes:profile().nodes.map(n=>({name:n[0],description:n[1],exercise:n[2],acceptance:n[3]})),completedNodeCount:count()});}
-function render(){const p=page();$('#current-page-label').textContent=pages.find(x=>x[0]===p)[1];$('#navigation').innerHTML=pages.map(([id,title,im])=>`<a href="#${id}" class="nav-item ${id===p?'active':''}" ${id===p?'aria-current="page"':''}>${icon(im)}<span>${title}</span>${id==='framework'?'<span class="nav-number">6</span>':''}</a>`).join('');$('#main-content').innerHTML=({garden,framework,session,coach:coachPage,projects:projectPage,method:methodPage,resources:resourcePage}[p])();document.title=`${pages.find(x=>x[0]===p)[1]} · 貅知识`;if(p==='coach')window.studyCoach.mount();const avatar=$('.avatar');if(avatar){avatar.textContent=window.StudyRole?.avatar||'🐾';avatar.setAttribute('aria-label',(window.StudyRole?.name||'貔貅')+'的学习空间');}window.StudyRole?.mount?.();}
+function wikiPage(options){return window.StudyWiki?window.StudyWiki.render(window.StudyApp.getContext(),options):garden();}
+function render(){const p=page(),isWiki=['garden','framework','resources'].includes(p)&&Boolean(window.StudyWiki);$('#current-page-label').textContent=pages.find(x=>x[0]===p)[1];$('#navigation').innerHTML=pages.filter(([id])=>['garden','resources','method'].includes(id)).map(([id,title,im])=>`<a href="#${id}" class="nav-item ${(id===p||id==='garden'&&p==='framework')?'active':''}" ${(id===p||id==='garden'&&p==='framework')?'aria-current="page"':''}>${icon(im)}<span>${title}</span></a>`).join('');$('#main-content').innerHTML=({garden:()=>wikiPage(),framework:()=>wikiPage(),session,coach:coachPage,projects:projectPage,method:methodPage,resources:()=>window.StudyWiki?wikiPage({pane:'materials'}):resourcePage()}[p])();document.title=`${pages.find(x=>x[0]===p)[1]} · 貅知识`;document.body.classList.toggle('wiki-workspace-page',isWiki);if(p==='coach')window.studyCoach.mount();if(isWiki)window.StudyWiki.mount();const avatar=$('.avatar');if(avatar){avatar.textContent=window.StudyRole?.avatar||'🐾';avatar.setAttribute('aria-label',(window.StudyRole?.name||'貔貅')+'的学习空间');}window.StudyRole?.mount?.();}
 function modal(title,content){$('#modal-title').textContent=title;$('#modal-body').innerHTML=content;for(const form of $('#modal-body').querySelectorAll('form')){form.dataset.roleId=activeScope().roleId;form.dataset.profileId=state.profile;}if(!$('#app-modal').open)$('#app-modal').showModal();}
 function editGoal(){const g=goal();modal('给学习一个小小的目标',`<form id="goal-form"><div class="form-grid"><label class="field full-width">这次想学到什么程度？<input name="goal" value="${esc(g.goal)}" required maxlength="300"></label><label class="field full-width">为什么学？会用在哪里？<textarea name="why" rows="2" required maxlength="500">${esc(g.why)}</textarea></label><label class="field full-width">留下什么作品，证明学会了？<textarea name="outcome" rows="2" required maxlength="500">${esc(g.outcome)}</textarea></label><label class="field">每次可投入（分钟）<input name="minutes" type="number" min="15" max="180" step="1" value="${state.minutes}" required></label><label class="field">目标水平<select name="level">${['认识概念','解释原理','能独立应用','能够排错','能够迁移创造'].map(x=>`<option ${x===(g.level||'能独立应用')?'selected':''}>${x}</option>`).join('')}</select></label></div><p class="field-help">先写一个具体、做得到的目标。它会自动放进你的 Claude 提示词。</p><div class="modal-actions"><button type="button" class="button secondary" data-action="close-modal">再想一想</button><button type="submit" class="button primary">保存学习目标</button></div></form>`);}
 function editBoundary(){modal('给这一次学习划好边界',`<form id="boundary-form">${[['must','必须掌握'],['optional','按需了解'],['later','这次先不学']].map(([key,title])=>`<label class="field">${title}<textarea name="${key}" rows="3" required maxlength="3000">${esc(scope()[key].join('\n'))}</textarea></label>`).join('')}<p class="field-help">每行一条，最多保留 15 条。拿不准的先放“按需了解”。</p><div class="modal-actions"><button class="button primary" type="submit">保存三份清单</button></div></form>`);}
@@ -144,7 +169,7 @@ function confirmImport(data,learningData,backupRole){
   if(origin!==expected.roleId){toast(`这是${origin==='apple'?'貔貅':'小羊'}的备份，请切换到对应角色再导入。原有记录未被替换。`);return;}
   try{requireScope(expected);}catch(error){toast(error.message);return;}
   modal('恢复当前角色的学习记录',`<p>只替换${esc(window.StudyRole?.name||'貔貅')}的目标、笔记和进度，并在连接成功后同步。另一个角色的记录不受影响。建议先导出当前记录。</p><div class="modal-actions"><button class="button secondary" data-action="export-json">先备份当前记录</button><button class="button primary" id="confirm-import">确认导入</button></div>`);
-  $('#confirm-import').addEventListener('click',()=>{try{requireScope(expected);if(learningData!==undefined)window.StudyLearning.importData(learningData);}catch(error){toast(window.StudyRole?.isSwitching?.()?error.message:'学习测验备份格式有误，原有记录未被替换。');return;}state=data;state.timer.deadline=null;save();$('#app-modal').close();render();toast('当前角色的备份已恢复，可以继续学习了。');},{once:true});
+  $('#confirm-import').addEventListener('click',()=>{try{requireScope(expected);if(learningData!==undefined)window.StudyLearning.importData(learningData);}catch(error){toast(window.StudyRole?.isSwitching?.()?error.message:'学习测验备份格式有误，原有记录未被替换。');return;}state=data;state.timer.deadline=null;window.dispatchEvent(new CustomEvent('study-workspace-reset',{detail:{roleId:activeScope().roleId}}));save();$('#app-modal').close();render();toast('当前角色的备份已恢复，可以继续学习了。');},{once:true});
 }
 document.addEventListener('click',async e=>{const button=e.target.closest('[data-action]');if(!button)return;const a=button.dataset.action;const id=button.dataset.id;
   if(a==='navigate')navigate(button.dataset.page);
@@ -167,7 +192,7 @@ document.addEventListener('click',async e=>{const button=e.target.closest('[data
   else if(a==='export-json'){download(JSON.stringify({...state,roleId:window.StudyRole?.id||'apple',learning:window.StudyLearning.exportData()},null,2),'貅知识-'+(window.StudyRole?.name||'貔貅')+'-学习备份.json','application/json;charset=utf-8');toast('当前角色的完整备份已导出，请保存到自己的文件夹。');}
   else if(a==='export-md')exportMD();
   else if(a==='import'){$('#import-file').value='';$('#import-file').click();}
-  else if(a==='reset-data'){const expected={roleId:activeScope().roleId};modal('清空当前角色的学习记录',`<p>只清空${esc(window.StudyRole?.name||'貔貅')}的目标、进度、笔记和复盘，并同步清空这个角色的云端记录。另一个角色不受影响。请先备份，确认后再清空。</p><div class="modal-actions"><button class="button secondary" data-action="export-json">先备份</button><button class="button secondary" data-action="close-modal">保留记录</button><button class="button primary" id="confirm-reset">确认清空</button></div>`);$('#confirm-reset').addEventListener('click',()=>{try{requireScope(expected);}catch(error){toast(error.message);return;}state=freshState();for(const id of Object.keys(profiles))window.StudyLearning.reset(id);save();$('#app-modal').close();render();toast('当前角色的记录已清空，从一颗新芽开始。');},{once:true});}
+  else if(a==='reset-data'){const expected={roleId:activeScope().roleId};modal('清空当前角色的学习记录',`<p>只清空${esc(window.StudyRole?.name||'貔貅')}的目标、进度、笔记和复盘，并同步清空这个角色的云端记录。另一个角色不受影响。请先备份，确认后再清空。</p><div class="modal-actions"><button class="button secondary" data-action="export-json">先备份</button><button class="button secondary" data-action="close-modal">保留记录</button><button class="button primary" id="confirm-reset">确认清空</button></div>`);$('#confirm-reset').addEventListener('click',()=>{try{requireScope(expected);}catch(error){toast(error.message);return;}state=freshState();window.dispatchEvent(new CustomEvent('study-workspace-reset',{detail:{roleId:activeScope().roleId}}));for(const id of Object.keys(profiles))window.StudyLearning.reset(id);save();$('#app-modal').close();render();toast('当前角色的记录已清空，从一颗新芽开始。');},{once:true});}
 });
 document.addEventListener('change',e=>{const el=e.target;if(el.dataset.task!==undefined){state.tasks[taskKey(Number(el.dataset.task))]=el.checked;save();}else if(el.dataset.project){state.projectTasks[el.dataset.project]=el.checked;save();}});
 document.addEventListener('input',e=>{const el=e.target;if(el.dataset.note){state.notes[el.dataset.note]=el.value;save();}else if(el.id==='resource-search'){resourceQuery=el.value;$('#resource-results').innerHTML=resourceCards(resources.filter(r=>(r.title+r.kind+r.desc).toLowerCase().includes(resourceQuery.toLowerCase())));}});
@@ -201,6 +226,12 @@ window.StudyApp=Object.freeze({
     state.frameworks[state.profile]=frame;state.boundaries[state.profile]=Object.fromEntries(Object.entries(b).map(([k,v])=>[k,v.map(t=>t.trim())]));for(let i=0;i<6;i++)state.completed[nodeKey(i)]=false;save();render();return {roleId:input.roleId,profileId:input.profileId,framework:frame,notesPreserved:true,nodeChecksReset:true};
   },
   recordNote(index,text){if(!Number.isInteger(index)||index<0||index>5||typeof text!=='string'||!text.trim()||text.length>20000)throw Error('请选择有效节点并填写1至20000字的笔记');state.notes[nodeKey(index)]=text.trim();save();render();return {nodeIndex:index,note:state.notes[nodeKey(index)]};},
+  listMaterials({nodeIndex,query=''}={}){const q=String(query).toLocaleLowerCase();return JSON.parse(JSON.stringify(state.materials.filter(m=>m.profileId===state.profile&&(nodeIndex===undefined||m.nodeIndex===nodeIndex)&&(!q||(m.title+' '+m.content+' '+m.url).toLocaleLowerCase().includes(q))).sort((a,b)=>b.updatedAt-a.updatedAt)));},
+  addMaterial(input,expected=activeScope()){requireScope(expected);if(!input||Object.keys(input).some(k=>!['title','type','content','url','nodeIndex'].includes(k)))throw Error('资料字段有误');const now=Date.now(),item={id:'mat-'+(window.crypto?.randomUUID?.()||now.toString(36)+'-'+Math.random().toString(36).slice(2)),profileId:state.profile,nodeIndex:input.nodeIndex??null,type:input.type||'note',title:input.title,content:input.content||'',url:input.url||'',createdAt:now,updatedAt:now};const clean=validateMaterials([...state.materials,item]);ensureMaterialCapacity(clean);state.materials=clean;save();render();return JSON.parse(JSON.stringify(item));},
+  updateMaterial(id,patch,expected=activeScope()){requireScope(expected);if(!patch||Object.keys(patch).some(k=>!['title','type','content','url','nodeIndex'].includes(k)))throw Error('资料修改字段有误');const at=state.materials.findIndex(m=>m.id===id&&m.profileId===state.profile);if(at<0)throw Error('当前方向没有这份资料');const next=validateMaterials(state.materials.map((m,i)=>i===at?{...m,...patch,updatedAt:Math.max(Date.now(),m.createdAt)}:m));ensureMaterialCapacity(next);state.materials=next;save();render();return JSON.parse(JSON.stringify(state.materials[at]));},
+  removeMaterial(id,expected=activeScope()){requireScope(expected);const item=state.materials.find(m=>m.id===id&&m.profileId===state.profile);if(!item)throw Error('当前方向没有这份资料');state.materials=state.materials.filter(m=>m.id!==id);save();render();return JSON.parse(JSON.stringify(item));},
+  getImaTarget(){return state.imaTargets[state.profile]?{...state.imaTargets[state.profile]}:null;},
+  setImaTarget(target,expected=activeScope()){requireScope(expected);const next={...state.imaTargets};if(target===null)delete next[state.profile];else next[state.profile]=target;state.imaTargets=validateImaTargets(next);save();render();return this.getImaTarget();},
   refresh(){render();}
 });
 render();

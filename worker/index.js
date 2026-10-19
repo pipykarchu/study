@@ -1,7 +1,7 @@
 // Sites supplies verified visitor identity at the deployment boundary. No service-token bypass.
 const MAX_BODY = 2_000_000;
 const PROFILE_IDS = ['product', 'coding', 'custom', 'fde'];
-const APP_KEYS = ['version', 'profile', 'goals', 'completed', 'tasks', 'notes', 'reviews', 'projectTasks', 'boundaries', 'minutes', 'day', 'timer', 'frameworks'];
+const APP_KEYS = ['version', 'profile', 'goals', 'completed', 'tasks', 'notes', 'reviews', 'projectTasks', 'boundaries', 'minutes', 'day', 'timer', 'frameworks', 'materials', 'imaTargets'];
 const ICON_NAMES = ['garden', 'map', 'book', 'project', 'spark', 'shelf', 'arrow', 'check', 'clock', 'github', 'target', 'copy', 'plus', 'download'];
 const IDENTITY = {verified: true, owner: true};
 const SECURITY_HEADERS = {
@@ -37,7 +37,7 @@ function boundedTree(value, depth = 0, budget = {n: 0}) {
 }
 function validText(value, limit) {if (typeof value !== 'string' || value.length > limit) invalid();}
 function validateApp(raw) {
-  keys(raw, APP_KEYS, APP_KEYS.filter(key => key !== 'frameworks'));
+  keys(raw, APP_KEYS, APP_KEYS.filter(key => !['frameworks', 'materials', 'imaTargets'].includes(key)));
   if (raw.version !== 1 || !PROFILE_IDS.includes(raw.profile) || !integer(raw.minutes, 15, 180) || !integer(raw.day, 0, 9)) invalid();
   for (const name of ['goals', 'completed', 'tasks', 'notes', 'projectTasks', 'boundaries']) {
     if (!object(raw[name]) || Object.keys(raw[name]).length > 200) invalid();
@@ -82,7 +82,23 @@ function validateApp(raw) {
     });
     cleanFrameworks[profileId] = {nodes, summary: framework.summary, updatedAt: framework.updatedAt};
   }
-  return JSON.parse(JSON.stringify({...raw, frameworks: cleanFrameworks}));
+  const materials = raw.materials === undefined ? [] : raw.materials;
+  if (!Array.isArray(materials) || materials.length > 80) invalid();
+  const materialIds = new Set();
+  for (const m of materials) {
+    const fields = ['id', 'profileId', 'nodeIndex', 'type', 'title', 'content', 'url', 'createdAt', 'updatedAt'];
+    keys(m, fields, fields);
+    if (typeof m.id !== 'string' || !/^mat-[A-Za-z0-9_-]{1,70}$/.test(m.id) || materialIds.has(m.id) || !PROFILE_IDS.includes(m.profileId) || !(m.nodeIndex === null || integer(m.nodeIndex, 0, 5)) || !['note', 'link', 'file'].includes(m.type)) invalid();
+    validText(m.title, 300); validText(m.content, 10000); validText(m.url, 2000);
+    if (!m.title.trim() || !(m.content.trim() || m.url) || m.type === 'link' && !m.url) invalid();
+    if (m.url) { let u; try { u = new URL(m.url); } catch (_) { invalid(); } if (!['https:', 'http:'].includes(u.protocol) || u.username || u.password) invalid(); }
+    if (!integer(m.createdAt, 0, 8_640_000_000_000_000) || !integer(m.updatedAt, m.createdAt, 8_640_000_000_000_000)) invalid();
+    materialIds.add(m.id);
+  }
+  const imaTargets = raw.imaTargets === undefined ? {} : raw.imaTargets;
+  keys(imaTargets, PROFILE_IDS);
+  for (const target of Object.values(imaTargets)) { keys(target, ['id', 'name'], ['id', 'name']); validText(target.id, 500); validText(target.name, 300); if (!target.id.trim()) invalid(); }
+  return JSON.parse(JSON.stringify({...raw, frameworks: cleanFrameworks, materials, imaTargets}));
 }
 
 /*__LEARNING_VALIDATOR__*/
@@ -174,6 +190,7 @@ async function stateApi(request, env, id, roleId) {
 
 /*__MEMBERSHIP_BRIDGE__*/
 
+/*__IMA_CONNECTOR__*/
 /*__STATIC_ASSETS__*/
 
 export default {
@@ -182,6 +199,7 @@ export default {
       const url = new URL(request.url);
       if (url.pathname.startsWith('/api/bridge/')) return await bridgeServiceApi(request, env, url);
       const id = await identify(request, env);
+      if (url.pathname.startsWith('/api/ima/')) return await imaApi(request, env, id, url);
       if (url.pathname.startsWith('/api/codex/')) return await membershipApi(request, env, id, url);
       if (url.pathname === '/api/study/state') {
         const roleId = studyRole(url);

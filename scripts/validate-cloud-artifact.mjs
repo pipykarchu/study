@@ -15,6 +15,7 @@ assert.ok(!source.includes('/*__LEARNING_VALIDATOR__*/'));
 assert.ok(!source.includes('/*__STATIC_ASSETS__*/'));
 assert.ok(!source.includes('/*__MEMBERSHIP_BRIDGE__*/'));
 assert.ok(!source.includes('/*__BRIDGE_TOOL_DEFINITIONS__*/'));
+assert.ok(!source.includes('/*__IMA_CONNECTOR__*/'));
 const {default: worker} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 assert.equal(typeof worker?.fetch, 'function');
 const email = 'artifact-owner@example.test';
