@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
   const roles = Object.freeze({
-    apple: Object.freeze({id: 'apple', name: '小苹果', avatar: '🍎', description: '我的学习知识框架'}),
+    apple: Object.freeze({id: 'apple', name: '玉玺', avatar: '玺', description: '我的学习知识框架'}),
     sheep: Object.freeze({id: 'sheep', name: '小羊', avatar: '🐑', description: '小羊的学习知识框架'})
   });
   const SESSION_KEY = 'study-bloom-active-role-v1';
@@ -26,7 +26,7 @@
     return url.pathname + url.search;
   }
   function urlFor(next) {
-    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择小苹果或小羊。');
+    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择玉玺或小羊。');
     const target = new global.URL(global.location.href);
     target.searchParams.set('role', next);
     return target.href;
@@ -48,7 +48,7 @@
     catch (_) { return false; }
   }
   async function choose(next) {
-    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择小苹果或小羊。');
+    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择玉玺或小羊。');
     if (busy) return false;
     if (next === id && explicit) { close(); return true; }
     busy = true;
@@ -88,11 +88,13 @@
     else dialog.setAttribute('open', '');
   }
   function mount() {
+    global.document.body.dataset.studyRole = id;
     const root = global.document.getElementById('study-role-control');
     if (root && !root.querySelector('.study-role-button')) {
       const button = global.document.createElement('button');
       button.type = 'button'; button.className = 'study-role-button';
-      button.textContent = current.avatar + ' ' + current.name + ' · 切换';
+      const mark = global.document.createElement('span'); mark.className = 'role-current-avatar'; mark.setAttribute('aria-hidden', 'true'); mark.textContent = current.avatar;
+      const label = global.document.createElement('span'); label.textContent = current.name + ' · 切换'; button.append(mark, label);
       button.setAttribute('aria-label', '当前角色' + current.name + '，切换学习角色');
       button.addEventListener('click', show); root.appendChild(button);
       try {

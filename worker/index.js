@@ -111,7 +111,7 @@ async function identify(request, env) {
 }
 function roleStorageKey(id, url) {
   const values = url.searchParams.getAll('role');
-  if (values.length > 1 || values.length === 1 && !['apple', 'sheep'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择小苹果或小羊。');
+  if (values.length > 1 || values.length === 1 && !['apple', 'sheep'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择玉玺或小羊。');
   // Verified identity excludes control characters; this internal suffix cannot collide with a real user id.
   return values[0] === 'sheep' ? id + '\u001frole:sheep' : id;
 }
