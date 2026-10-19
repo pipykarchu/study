@@ -2,8 +2,8 @@
 (function (global) {
   'use strict';
   const roles = Object.freeze({
-    apple: Object.freeze({id: 'apple', name: '小苹果', avatar: '🍎', gender: '女孩', description: '我的学习知识框架'}),
-    sheep: Object.freeze({id: 'sheep', name: '小羊', avatar: '🐑', gender: '男孩', description: '小羊的学习知识框架'})
+    apple: Object.freeze({id: 'apple', name: '小苹果', avatar: '🍎', description: '我的学习知识框架'}),
+    sheep: Object.freeze({id: 'sheep', name: '小羊', avatar: '🐑', description: '小羊的学习知识框架'})
   });
   const SESSION_KEY = 'study-bloom-active-role-v1';
   const SWITCH_NOTE_KEY = 'study-bloom-role-switch-note-v1';
@@ -115,7 +115,7 @@
       const button = global.document.createElement('button'); button.type = 'button'; button.className = 'role-card'; button.dataset.role = role.id;
       button.setAttribute('aria-pressed', String(role.id === id));
       const avatar = global.document.createElement('span'); avatar.className = 'role-avatar'; avatar.setAttribute('aria-hidden', 'true'); avatar.textContent = role.avatar;
-      const name = global.document.createElement('strong'); name.textContent = role.name + ' · ' + role.gender;
+      const name = global.document.createElement('strong'); name.textContent = role.name;
       const description = global.document.createElement('small'); description.textContent = role.description;
       button.append(avatar, name, description);
       button.addEventListener('click', () => { choose(role.id).catch(() => showNotice('暂时无法切换，当前记录已保留，请稍后再试。')); });
