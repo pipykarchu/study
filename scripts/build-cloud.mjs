@@ -1,11 +1,17 @@
 import {readFile, writeFile, mkdir, readdir, copyFile} from 'node:fs/promises';
 import {resolve, extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import vm from 'node:vm';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const hosting = JSON.parse(await readFile(resolve(root, '.openai/hosting.json'), 'utf8'));
 if (hosting.static != null || hosting.d1 !== 'DB') throw new Error('Cloud build requires Worker hosting with d1:"DB" and without static configuration.');
 const worker = await readFile(resolve(root, 'worker/index.js'), 'utf8');
+const toolContext = {};
+vm.runInNewContext(await readFile(resolve(root, 'dist/learning-tool-defs.js'), 'utf8'), toolContext);
+const bridgeTools = toolContext.StudyToolDefinitions.filter(tool => tool.name !== 'study_select_profile');
+if (bridgeTools.length !== 9) throw new Error('Expected nine bounded membership learning tools.');
+const bridge = (await readFile(resolve(root, 'worker/membership.js'), 'utf8')).replace('/*__BRIDGE_TOOL_DEFINITIONS__*/', () => 'const BRIDGE_TOOL_DEFINITIONS = ' + JSON.stringify(bridgeTools) + ';');
 const learning = await readFile(resolve(root, 'dist/learning.js'), 'utf8');
 if (!learning.includes('})(window);')) throw new Error('Learning validator source changed; review the cloud validator wrapper.');
 const validator = `function validateLearningSnapshot(raw) {\nconst window = {localStorage: {getItem() {return null;}, setItem() {}}, dispatchEvent() {}, CustomEvent: class {constructor() {}}};\n${learning}\nwindow.StudyLearning.importData(raw);\nreturn window.StudyLearning.exportData();\n}`;
@@ -20,7 +26,7 @@ for (const entry of (await readdir(resolve(root, 'dist'), {withFileTypes: true})
   assets['/' + entry.name] = {body: body.toString(binary ? 'base64' : 'utf8'), type: types[extension], ...(binary ? {encoding: 'base64'} : {})};
 }
 if (!assets['/index.html']) throw new Error('Missing learning website index.html.');
-const output = worker.replace('/*__LEARNING_VALIDATOR__*/', () => validator).replace('/*__STATIC_ASSETS__*/', () => 'const STATIC_ASSETS = ' + JSON.stringify(assets) + ';');
+const output = worker.replace('/*__LEARNING_VALIDATOR__*/', () => validator).replace('/*__MEMBERSHIP_BRIDGE__*/', () => bridge).replace('/*__STATIC_ASSETS__*/', () => 'const STATIC_ASSETS = ' + JSON.stringify(assets) + ';');
 await mkdir(resolve(root, 'dist/server'), {recursive: true});
 await mkdir(resolve(root, 'dist/.openai'), {recursive: true});
 await writeFile(resolve(root, 'dist/server/index.js'), output);
@@ -30,5 +36,6 @@ await writeFile(resolve(root, 'dist/.openai/hosting.json'), JSON.stringify(hosti
 // This immutable initial migration and fixed journal timestamp are deterministic across builds.
 await mkdir(resolve(root, 'drizzle/meta'), {recursive: true});
 await copyFile(resolve(root, 'migrations/0000_study_state.sql'), resolve(root, 'drizzle/0000_study_state.sql'));
-await writeFile(resolve(root, 'drizzle/meta/_journal.json'), JSON.stringify({version: '7', dialect: 'sqlite', entries: [{idx: 0, version: '6', when: 1792371600000, tag: '0000_study_state', breakpoints: true}]}, null, 2) + '\n');
-console.log(`Built single-file Sites Worker with ${Object.keys(assets).length} embedded assets and one schema-only D1 migration.`);
+await copyFile(resolve(root, 'migrations/0001_membership_bridge.sql'), resolve(root, 'drizzle/0001_membership_bridge.sql'));
+await writeFile(resolve(root, 'drizzle/meta/_journal.json'), JSON.stringify({version: '7', dialect: 'sqlite', entries: [{idx: 0, version: '6', when: 1792371600000, tag: '0000_study_state', breakpoints: true}, {idx: 1, version: '6', when: 1792461600000, tag: '0001_membership_bridge', breakpoints: true}]}, null, 2) + '\n');
+console.log(`Built single-file Sites Worker with ${Object.keys(assets).length} embedded assets and two schema-only D1 migrations.`);

@@ -1,4 +1,4 @@
-/* 直接写目标，交给旁边的 GPT 生成；不在网页中索取账号或密钥。 */
+/* 直接写目标，在本人 Codex 学习对话中生成；复制指令作为备用入口。 */
 (() => {
   'use strict';
   const drafts = new Map();
@@ -46,7 +46,7 @@
   }
   function preparedMarkup(item) {
     if (!item.prompt) return '';
-    return `<details class="planner-prepared" ${item.manual ? 'open' : ''}><summary>${item.manual ? '手动复制生成指令' : '查看这次的生成指令'}</summary><p>把下面整段发给旁边的 GPT / Codex。收到工具写回结果后，知识框架才会更新。</p><textarea class="planner-prompt" readonly aria-label="给 GPT 的框架生成指令" rows="8">${esc(item.prompt)}</textarea><button type="button" class="button secondary small" data-planner-copy>再次复制指令</button></details>`;
+    return `<details class="planner-prepared" ${item.manual ? 'open' : ''}><summary>${item.manual ? '手动复制生成指令' : '查看这次的生成指令'}</summary><p>可以把下面指令复制到官方 Codex 作为备用。收到工具写回和云端保存结果后，知识框架才会更新。</p><textarea class="planner-prompt" readonly aria-label="给 GPT 的框架生成指令" rows="8">${esc(item.prompt)}</textarea><button type="button" class="button secondary small" data-planner-copy>再次复制指令</button></details>`;
   }
   function refresh(key) {
     const root = findPanel(key), item = drafts.get(key);
@@ -88,7 +88,7 @@
     const sheep = data.roleId === 'sheep';
     const name = data.roleName || (sheep ? '小羊' : '貔貅');
     const avatar = data.roleAvatar || (sheep ? '🐑' : '🐾');
-    return `<section class="panel study-planner" data-study-planner data-planner-key="${esc(key)}" aria-busy="${item.busy}" aria-labelledby="planner-title"><div class="planner-heading"><div><div class="section-kicker">GROW YOUR OWN LEARNING MAP</div><h2 id="planner-title">写下目标，让知识框架长出来</h2><p class="planner-intro">输入目标 → 复制给旁边 GPT → GPT 生成并回填</p></div><span class="planner-owner"><span aria-hidden="true">${esc(avatar)}</span><span>${esc(name)}<small>${esc(data.profile || '当前学习方向')}</small></span></span></div><form data-planner-form><div class="planner-fields"><label class="field planner-wide">这次想做到什么？<input name="goal" required maxlength="3000" value="${esc(value.goal)}" placeholder="例如：独立做出一个能用的小网站"></label><label class="field">为什么想学？<textarea name="why" required maxlength="3000" rows="3" placeholder="会用在哪个真实场景？">${esc(value.why)}</textarea></label><label class="field">用什么证明学会了？<textarea name="outcome" required maxlength="3000" rows="3" placeholder="写下可以演示、检查的作品或结果">${esc(value.outcome)}</textarea></label><label class="field">希望学到哪一步？<select name="level">${levels.map(level => `<option ${value.level === level ? 'selected' : ''}>${esc(level)}</option>`).join('')}</select></label><label class="field">每次学习几分钟？<input name="minutes" type="number" min="15" max="180" step="1" required value="${esc(value.minutes)}"></label></div><div class="planner-actions"><button class="button secondary" type="submit" value="save" data-planner-submit ${item.busy ? 'disabled' : ''}>保存目标</button><button class="button primary" type="submit" value="prepare" data-planner-submit ${item.busy ? 'disabled' : ''}>保存并准备 GPT 生成 <span aria-hidden="true">↗</span></button></div></form><p class="planner-status ${item.error ? 'planner-error' : ''}" data-planner-status role="status" aria-live="polite">${esc(item.status)}</p><div data-planner-prepared>${preparedMarkup(item)}</div><details class="planner-help"><summary>怎样让 GPT 帮我回填？</summary><ol><li>先在这里填写并保存目标，复制生成指令。</li><li>在 Codex 里打开本站，把指令发到旁边的对话。</li><li>GPT 读取当前角色，生成框架后通过本站工具写回。</li></ol><p>网页里的按钮负责保存和准备指令，生成发生在你的对话里。无需在网页输入密码或密钥；工具未连接时，可以先保留 GPT 的回答。</p></details></section>`;
+    return `<section class="panel study-planner" data-study-planner data-planner-key="${esc(key)}" aria-busy="${item.busy}" aria-labelledby="planner-title"><div class="planner-heading"><div><div class="section-kicker">GROW YOUR OWN LEARNING MAP</div><h2 id="planner-title">写下目标，让知识框架长出来</h2><p class="planner-intro">输入目标 → 在本站对话确认发送 → Codex 生成并保存</p></div><span class="planner-owner"><span aria-hidden="true">${esc(avatar)}</span><span>${esc(name)}<small>${esc(data.profile || '当前学习方向')}</small></span></span></div><form data-planner-form><div class="planner-fields"><label class="field planner-wide">这次想做到什么？<input name="goal" required maxlength="3000" value="${esc(value.goal)}" placeholder="例如：独立做出一个能用的小网站"></label><label class="field">为什么想学？<textarea name="why" required maxlength="3000" rows="3" placeholder="会用在哪个真实场景？">${esc(value.why)}</textarea></label><label class="field">用什么证明学会了？<textarea name="outcome" required maxlength="3000" rows="3" placeholder="写下可以演示、检查的作品或结果">${esc(value.outcome)}</textarea></label><label class="field">希望学到哪一步？<select name="level">${levels.map(level => `<option ${value.level === level ? 'selected' : ''}>${esc(level)}</option>`).join('')}</select></label><label class="field">每次学习几分钟？<input name="minutes" type="number" min="15" max="180" step="1" required value="${esc(value.minutes)}"></label></div><div class="planner-actions"><button class="button secondary" type="submit" value="save" data-planner-submit ${item.busy ? 'disabled' : ''}>保存目标</button><button class="button primary" type="submit" value="prepare" data-planner-submit ${item.busy ? 'disabled' : ''}>保存并打开 Codex 生成 <span aria-hidden="true">↗</span></button></div></form><p class="planner-status ${item.error ? 'planner-error' : ''}" data-planner-status role="status" aria-live="polite">${esc(item.status)}</p><div data-planner-prepared>${preparedMarkup(item)}</div><details class="planner-help"><summary>怎样让 Codex 帮我回填？</summary><ol><li>先在这里填写目标，选择“保存并打开 Codex 生成”。</li><li>会打开本站学习对话，检查指令后点击发送。</li><li>Codex 读取当前角色，生成框架后保存到同一角色。</li></ol><p>使用你自己的会员额度，连接电脑需保持运行。连接未就绪时，记录和测验仍可用，也可备用复制指令。无需在网页输入密码或 API 密钥。</p></details></section>`;
   }
   document.addEventListener('input', event => {
     const field = event.target, form = field.closest && field.closest('[data-planner-form]');
@@ -140,8 +140,16 @@
       item.dirty = false;
       if (event.submitter && event.submitter.value === 'prepare') {
         item.prompt = buildPrompt({...latest, ...values});
-        await copyPrepared(key);
-      } else item.status = '目标已保存。准备好后，可以交给旁边的 GPT 生成框架。';
+        if(window.StudySync&&!['127.0.0.1','localhost'].includes(location.hostname)) {
+          await window.StudySync.ready;
+          if(!currentTarget(key,epoch))throw Error('角色或方向已变化，生成尚未开始。');
+          const synced=await window.StudySync.flush();
+          if(!synced.cloudSaved)throw Error('目标保留在本机，尚未同步到云端；请先恢复同步再生成。');
+        }
+        if(!currentTarget(key,epoch)||item.revision!==revision)throw Error('目标已修改，请重新保存后再生成。');
+        if(!window.studyCoach?.prepare?.(item.prompt,{roleId:latest.roleId,profileId:latest.profileId}))throw Error('当前对话正在回答，目标已保存，请先停止回答后再生成。');
+        item.status='目标已保存，生成指令已填入学习对话。请检查后点击发送。';
+      } else item.status = '目标已保存。准备好后，可以在本站对话里让 Codex 生成框架。';
     } catch (error) {
       item.status = error && error.message ? String(error.message).slice(0,400) : '目标未保存成功，请保留内容后重试。';
       item.error = true;

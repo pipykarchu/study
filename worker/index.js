@@ -172,13 +172,17 @@ async function stateApi(request, env, id, roleId) {
   return json(publicState(row, roleId));
 }
 
+/*__MEMBERSHIP_BRIDGE__*/
+
 /*__STATIC_ASSETS__*/
 
 export default {
   async fetch(request, env) {
     try {
-      const id = await identify(request, env);
       const url = new URL(request.url);
+      if (url.pathname.startsWith('/api/bridge/')) return await bridgeServiceApi(request, env, url);
+      const id = await identify(request, env);
+      if (url.pathname.startsWith('/api/codex/')) return await membershipApi(request, env, id, url);
       if (url.pathname === '/api/study/state') {
         const roleId = studyRole(url);
         return await stateApi(request, env, roleStorageKey(id, roleId), roleId);

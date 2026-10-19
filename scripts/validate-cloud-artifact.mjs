@@ -13,6 +13,8 @@ assert.equal(built.static, undefined);
 assert.equal(built.d1, 'DB');
 assert.ok(!source.includes('/*__LEARNING_VALIDATOR__*/'));
 assert.ok(!source.includes('/*__STATIC_ASSETS__*/'));
+assert.ok(!source.includes('/*__MEMBERSHIP_BRIDGE__*/'));
+assert.ok(!source.includes('/*__BRIDGE_TOOL_DEFINITIONS__*/'));
 const {default: worker} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 assert.equal(typeof worker?.fetch, 'function');
 const email = 'artifact-owner@example.test';
@@ -34,4 +36,6 @@ assert.equal(await readFile(resolve(root, 'drizzle/0000_study_state.sql'), 'utf8
 const journal = JSON.parse(await readFile(resolve(root, 'drizzle/meta/_journal.json'), 'utf8'));
 assert.equal(journal.dialect, 'sqlite');
 assert.equal(journal.entries[0].tag, '0000_study_state');
+assert.equal(journal.entries[1].tag, '0001_membership_bridge');
+assert.equal(await readFile(resolve(root, 'drizzle/0001_membership_bridge.sql'), 'utf8'), await readFile(resolve(root, 'migrations/0001_membership_bridge.sql'), 'utf8'));
 console.log('Cloud artifact validated: ESM Worker, current embedded assets, owner gate, D1 manifest and migration journal.');

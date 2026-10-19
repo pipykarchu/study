@@ -2,7 +2,6 @@
 (() => {
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const local = ['127.0.0.1', 'localhost'].includes(location.hostname);
-  const localUrl = `http://127.0.0.1:4175/?role=${window.StudyRole?.id === 'sheep' ? 'sheep' : 'apple'}#coach`;
   const select = s => document.querySelector(s);
   const fallbackStages = [
     {id:'frame',title:'知识框架',description:'先说清要解决什么问题、学到哪里就够用。'},
@@ -50,16 +49,15 @@
     return `学习角色：${context.roleName || window.StudyRole?.name || '貔貅'}（${context.roleId || window.StudyRole?.id || 'apple'}）\n学习方向：${context.profile || ''}\n目标：${context.goal || ''}\n用途：${context.why || ''}\n验收作品：${context.outcome || ''}\n每次时间：${context.minutes || 45} 分钟\n必须掌握：${(b.must || []).join('；')}\n按需了解：${(b.optional || []).join('；')}\n暂时不学：${(b.later || []).join('；')}\n当前学习阶段：${st.title}\n知识节点：${(context.nodes || []).map(n => `${n.name}：${n.description || ''}；练习：${n.exercise || ''}；验收：${n.acceptance || ''}`).join('\n')}\n教学要求：用中文大白话，一次只推进一个小问题，先问再讲，练习和测验先不给答案；不要因我发了消息就宣称掌握。`.slice(0,12000);
   }
   function stateText() {
-    if (checking || !status) return '正在检查本机 Codex…';
-    if (!status.available) return status.message || '本机 Codex 连接未就绪';
+    if (checking || !status) return '正在检查我的 Codex…';
+    if (!status.available) return status.message || (local ? '本机 Codex 连接未就绪' : '连接电脑未运行，记录和测验仍可用');
     const ownerErrors = {owner_not_configured:'本机尚未绑定站点所有者，请回到 Codex 完成本人账号校验',owner_mismatch:'当前 Codex 账号与站点所有者不一致，暂不允许问答',codex_login_required:'请先在本机 Codex 官方客户端中登录',account_changed:'检测到 Codex 账号已切换，请重新检查本人身份'};
     if (status.authError) return ownerErrors[status.authError] || '未能确认站点所有者身份，请重新检查连接';
-    if (!status.authenticated) return '请先在本机 Codex 官方客户端中登录';
+    if (!status.authenticated || (!local && !status.ownerVerified)) return local ? '请先在本机 Codex 官方客户端中登录' : '请在连接电脑登录本站所有者的 Codex，再检查连接';
     return `已连接你的 Codex${status.model ? ' · ' + status.model : ''}`;
   }
   function connection() {
-    if (!local) return `<div class="coach-connection offline"><span class="coach-status-dot"></span><div><strong>和旁边的 Codex 一起学</strong><p>在 Codex 内置浏览器打开本站，在旁边的 Codex 对话里提问。站点工具可读写学习目标、笔记和测验；云端同步状态见左下角。登录仍由 OpenAI 官方处理。</p></div><a class="button secondary small" href="${localUrl}">本机网页问答 ↗</a></div>`;
-    return `<div class="coach-connection ${status?.authenticated ? 'online' : 'offline'}"><span class="coach-status-dot"></span><div><strong id="coach-status-text">${escape(stateText())}</strong><p>${escape(status?.modelNotice || '沿用本机已有登录与模型设置。账号登录只在 Codex 官方客户端完成，本站不索取密码。')}</p></div><button class="button secondary small" data-coach-action="retry" ${checking ? 'disabled' : ''}>${checking ? '检查中…' : '检查连接'}</button></div>`;
+    return `<div class="coach-connection ${status?.authenticated && (local || status?.ownerVerified) ? 'online' : 'offline'}"><span class="coach-status-dot"></span><div><strong id="coach-status-text">${escape(stateText())}</strong><p>${escape(status?.modelNotice || (local ? '沿用本机已有登录与模型设置。账号登录只在 Codex 官方客户端完成，本站不索取密码。' : '使用你自己的 Codex 会员额度，受套餐用量限制。连接电脑需保持运行；无需另填 API 密钥。'))}</p></div><button class="button secondary small" data-coach-action="retry" ${checking ? 'disabled' : ''}>${checking ? '检查中…' : '检查连接'}</button></div>`;
   }
   function promptFor(id) {
     const target = context.goal || '我的学习目标';
@@ -89,11 +87,11 @@
   }
   function messageList() {
     const messages = session().messages;
-    if (!messages.length) return `<div class="coach-welcome"><span class="coach-welcome-flower" aria-hidden="true">✿</span><h2>先画一张地图，再一点点学会</h2><p>上方是本阶段的学习引导。选一个问题填入下方，按自己的节奏开始。</p><div class="coach-starters"><button class="coach-starter" data-coach-action="stage-prompt">从当前这一步开始 <span>↗</span></button><button class="coach-starter" data-coach-action="question-start">先问我一个问题，看看我会多少 <span>↗</span></button></div>${!local ? '<p class="coach-cloud-hint">在旁边的 Codex 对话里说：读取本站的学习目标，先问我一个问题。站点工具就绪后，Codex 可以把练习结果保存到这里。</p>' : ''}</div>`;
+    if (!messages.length) return `<div class="coach-welcome"><span class="coach-welcome-flower" aria-hidden="true">✿</span><h2>先画一张地图，再一点点学会</h2><p>在这里直接提问。Codex 可以读取本角色的目标、修改框架、记笔记和带你测验；保存成功后才会确认。</p><div class="coach-starters"><button class="coach-starter" data-coach-action="stage-prompt">从当前这一步开始 <span>↗</span></button><button class="coach-starter" data-coach-action="question-start">先问我一个问题，看看我会多少 <span>↗</span></button></div></div>`;
     return messages.map(m => `<article class="coach-message ${m.role}"${m.error ? ' data-error="true"' : ''}><span class="coach-message-avatar" aria-hidden="true">${m.role === 'user' ? escape(context.roleAvatar || window.StudyRole?.avatar || '🐾') : '✦'}</span><div><strong>${m.role === 'user' ? '我' : '我的 Codex · 实际回答'}</strong><div class="coach-message-text">${escape(m.text || (sending() && m.role === 'assistant' ? '正在想一想…' : '回答已停止。'))}</div></div></article>`).join('');
   }
   function formActions() {
-    return `<span>${local ? 'Enter 发送 · Shift + Enter 换行' : '先写问题，再复制到旁边的 Codex 对话'}</span><div class="coach-send-buttons"><button type="button" class="text-button" data-coach-action="copy-prompt">复制问题</button>${sending() ? '<button type="button" class="button secondary small" data-coach-action="stop">停止回答</button>' : `<button type="submit" class="button primary small" id="coach-send" ${!local || !status?.authenticated ? 'disabled' : ''}>发送给我的 Codex ↗</button>`}</div>`;
+    return `<span>Enter 发送 · Shift + Enter 换行</span><div class="coach-send-buttons"><button type="button" class="text-button" data-coach-action="copy-prompt">备用：复制问题</button>${sending() ? '<button type="button" class="button secondary small" data-coach-action="stop">停止回答</button>' : `<button type="submit" class="button primary small" id="coach-send" ${!status?.available || !status?.authenticated || (!local && !status?.ownerVerified) ? 'disabled' : ''}>发送给我的 Codex ↗</button>`}</div>`;
   }
   function evidencePanel() {
     const st = stageInfo(), key = `${scopeKey()}:${st.id}`;
@@ -102,7 +100,7 @@
     return `<form id="coach-evidence-form" class="coach-evidence"><label for="coach-evidence"><strong>留下自己的学习证据</strong><span>写下你的框架、练习结果、作品说明或复述。记录完成不代表 AI 已验证掌握。</span></label>${previous ? `<details class="coach-saved-evidence"><summary>查看这一步最近的产出</summary><p>${escape(previous.text)}</p></details>` : ''}<textarea id="coach-evidence" rows="2" maxlength="2000" placeholder="例如：我能用自己的话解释……；我做出了……，验收结果是……">${escape(evidenceDrafts.get(key) || '')}</textarea><div class="coach-evidence-actions"><small>${previous ? '这一步已有记录，可以补充新的产出。' : '先留下一条自己的产出，再记录这一步。'}</small><button type="submit" class="button secondary small">记录完成这一步 ✓</button></div></form>`;
   }
   function chatPanel() {
-    return `<div id="coach-guide">${stageGuide()}</div><div class="coach-messages" id="coach-messages" role="log" aria-live="polite" aria-relevant="additions text">${messageList()}</div><form class="coach-composer" id="coach-form"><label class="sr-only" for="coach-input">向自己的 Codex 提问</label><textarea id="coach-input" rows="3" maxlength="8000" placeholder="先写一个具体问题，或者点上方按钮填入阶段提问……">${escape(session().draft)}</textarea><div class="coach-compose-actions">${formActions()}</div></form><p class="coach-footnote">${sessionStorageAvailable ? '对话文字仅保存在当前标签页；刷新后开启新的 Codex 会话，不会自动带入旧聊天。' : '浏览器禁止保存对话，刷新后文字会丢失。'} 登录凭据不会写入网页存储。</p>${evidencePanel()}`;
+    return `<div id="coach-guide">${stageGuide()}</div><div class="coach-messages" id="coach-messages" role="log" aria-live="polite" aria-relevant="additions text">${messageList()}</div><form class="coach-composer" id="coach-form"><label class="sr-only" for="coach-input">向自己的 Codex 提问</label><textarea id="coach-input" rows="3" maxlength="8000" placeholder="先写一个具体问题，或者点上方按钮填入阶段提问……">${escape(session().draft)}</textarea><div class="coach-compose-actions">${formActions()}</div></form><p class="coach-footnote">${sessionStorageAvailable ? '对话草稿留在当前标签页；刷新后开启新会话。' : '浏览器禁止保存草稿，刷新后文字会丢失。'}${local ? ' 问答由本机 Codex 处理。' : ' 问答经私人云端临时中转，会员连接电脑需保持开机。'} 登录凭据不会写入网页存储。</p>${evidencePanel()}`;
   }
   const nodeName = i => context.nodes?.[i]?.name || `知识节点 ${Number(i) + 1}`;
   function quizSummary(q) {
@@ -156,26 +154,26 @@
   }
   function notice(message) { feedback = message; const el = select('#coach-notice'); if (el) { el.textContent = message; el.hidden = !message; } }
   function error(message) { const el = select('#coach-error'); if (el) { el.textContent = message; el.hidden = false; } }
-  async function request(path, body, signal, keepalive = false) { return fetch(path, {method:'POST',headers:{'Content-Type':'application/json','X-Study-Token':token || ''},body:JSON.stringify(body),...(signal ? {signal} : {}),...(keepalive ? {keepalive:true} : {})}); }
+  async function request(path, body, signal, keepalive = false) { return fetch(path, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Study-Token':token || ''},body:JSON.stringify(body),...(signal ? {signal} : {}),...(keepalive ? {keepalive:true} : {})}); }
   async function check() {
-    if (!local || checking) return;
+    if (checking || pageLeaving) return;
     checking = true; const panel = select('#coach-connection'); if (panel) panel.innerHTML = connection();
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),25000);
     try {
-      const r = await fetch('/api/codex/session', {cache:'no-store',signal:controller.signal});
-      if (!r.ok) throw Error('请用“启动貅知识”打开支持 Codex 的本机版。');
-      const saved = await r.json(); if (typeof saved.token !== 'string') throw Error('本机连接没有就绪，请重新启动本机版。'); token = saved.token;
-      const health = await fetch('/api/codex/status', {cache:'no-store',signal:controller.signal});
-      if (!health.ok) throw Error('本机 Codex 暂时没有响应，稍后再检查连接。'); status = await health.json();
+      const r = await fetch('/api/codex/session', {credentials:'same-origin',cache:'no-store',signal:controller.signal});
+      if (!r.ok) throw Error(local ? '请用“启动貅知识”打开支持 Codex 的本机版。' : '请先登录本站所有者的 OpenAI 账号，再检查连接。');
+      const saved = await r.json(); if (typeof saved.token !== 'string') throw Error('Codex 连接没有就绪，请重新检查。'); token = saved.token;
+      const health = await fetch('/api/codex/status', {credentials:'same-origin',cache:'no-store',signal:controller.signal});
+      if (!health.ok) throw Error('Codex 暂时没有响应，稍后再检查连接。'); status = await health.json();
     } catch (e) { status = {available:false,authenticated:false,message:e.name === 'AbortError' ? '连接检查超时，请稍后重试。' : e.message}; }
     finally { clearTimeout(timeout); checking = false; const panel = select('#coach-connection'); if (panel) panel.innerHTML = connection(); updateForm(); }
   }
   async function send(text) {
-    if (sending() || !local || !sameScope(scope())) return;
-    if (!status?.authenticated) { error('先检查连接，确认本机 Codex 已登录。'); return; }
+    if (sending() || !sameScope(scope())) return;
+    if (!status?.available || !status?.authenticated || (!local && !status?.ownerVerified)) { error('先检查连接，确认连接电脑的本人 Codex 已登录并运行。'); return; }
     text = text.trim(); if (!text) return;
     const target = scope(), chat = session(), controller = new AbortController();
-    const task = {controller,chat,scope:target,stopRequested:false}; activeRequest = task;
+    const task = {controller,chat,scope:target,stopRequested:false,jobId:null,toolResults:new Map()}; activeRequest = task;
     const err = select('#coach-error'); if (err) err.hidden = true;
     chat.draft = ''; const input = select('#coach-input'); if (input) input.value = '';
     chat.messages.push({role:'user',text},{role:'assistant',text:''}); const answer = chat.messages[chat.messages.length - 1];
@@ -184,19 +182,45 @@
     try {
       const r = await request('/api/codex/chat', {...target,message:text,context:promptContext,...(chat.conversationId ? {conversationId:chat.conversationId} : {})},controller.signal);
       if (task.stopRequested || !sameScope(target)) throw new DOMException('已离开这段对话。','AbortError');
-      if (!r.ok) { let detail; try { detail = await r.json(); } catch {} throw Error(detail?.message || detail?.error || `本机服务暂时无法回答（${r.status}），请检查连接后重试。`); }
+      if (!r.ok) { let detail; try { detail = await r.json(); } catch {} throw Error(detail?.message || detail?.error || `Codex 暂时无法回答（${r.status}），请检查连接后重试。`); }
       if (!r.body) throw Error('浏览器没有收到回答数据，请重试。');
       const reader = r.body.getReader(), decoder = new TextDecoder(); let buffer = '';
-      function handle(line) {
+      async function handle(line) {
         if (task.stopRequested || !sameScope(target)) throw new DOMException('已离开这段对话。','AbortError');
         if (!line.trim()) return; const event = JSON.parse(line);
-        if (event.type === 'conversation') chat.conversationId = event.conversationId;
+        if (event.type === 'job') {
+          if(typeof event.jobId!=='string'||!event.jobId||event.roleId!==target.roleId||event.profileId!==target.profileId||(task.jobId&&event.jobId!==task.jobId))throw Error('收到不属于当前角色的任务，已停止。');
+          task.jobId=event.jobId;
+        }
+        else if (event.type === 'conversation') {
+          if(typeof event.conversationId!=='string'||!event.conversationId||(!local&&(typeof event.jobId!=='string'||!event.jobId)))throw Error('对话连接信息不完整，请重试。');
+          if(task.jobId&&event.jobId!==task.jobId)throw Error('收到不属于当前请求的对话，已停止。');
+          chat.conversationId = event.conversationId;task.jobId=event.jobId||null;
+        }
+        else if (event.type === 'tool_call') {
+          const textId=value=>typeof value==='string'&&value.length>0&&value.length<=200;
+          if(!textId(event.callId)||!textId(event.nonce)||!task.jobId||event.jobId!==task.jobId||event.conversationId!==chat.conversationId||event.roleId!==target.roleId||event.profileId!==target.profileId)throw Error('收到其他角色或对话的操作，已拦截。');
+          const callKey=`${event.callId}:${event.nonce}`;
+          let result=task.toolResults.get(callKey);
+          if(!result) {
+            try {
+              if(typeof window.StudyTools?.executeInline!=='function')throw Error('学习操作尚未加载，请刷新后重试');
+              result=await window.StudyTools.executeInline(event.name,event.arguments,target,controller.signal);
+            } catch(err) {result={ok:false,cloudSaved:false,message:err.message||'这次学习操作没有执行'};}
+            if(task.stopRequested||activeRequest!==task||!sameScope(target))throw new DOMException('已离开这段对话。','AbortError');
+            task.toolResults.set(callKey,result);
+          }
+          const posted=await request('/api/codex/tool-result',{jobId:task.jobId,...target,conversationId:chat.conversationId,callId:event.callId,nonce:event.nonce,result},controller.signal);
+          if(!posted.ok)throw Error('学习操作结果未能送回 Codex，请检查同步状态后重试。');
+          if(result.ok&&result.cloudSaved===true)notice('Codex 的学习修改已保存到当前角色的云端记录。');
+          else if(!result.ok)error(result.message||'这次修改尚未保存到云端，Codex 已收到失败说明。');
+        }
         else if (event.type === 'delta') { answer.text += event.text || ''; if (sameScope(target)) updateMessages(); }
         else if (event.type === 'done') terminal = true;
         else if (event.type === 'error') throw Error(event.message || '这次回答没有完成。');
       }
-      while (true) { const {value,done} = await reader.read(); if (done) break; buffer += decoder.decode(value,{stream:true}); const lines = buffer.split('\n'); buffer = lines.pop(); for (const line of lines) handle(line); }
-      buffer += decoder.decode(); if (buffer.trim()) handle(buffer);
+      while (true) { const {value,done} = await reader.read(); if (done) break; buffer += decoder.decode(value,{stream:true}); if(buffer.length>1000000)throw Error('回答数据过大，请缩小问题后重试。'); const lines = buffer.split('\n'); buffer = lines.pop(); for (const line of lines) await handle(line); }
+      buffer += decoder.decode(); if (buffer.trim()) await handle(buffer);
       if (!terminal) throw Error('连接中断了，已收到的回答保留在上面。');
     } catch (e) {
       if (e.name === 'AbortError' && task.stopRequested) { if (!answer.text) answer.text = '这次回答已停止。'; }
@@ -206,15 +230,15 @@
   async function stopCurrent(detach = false) {
     const task = activeRequest; if (!task) return; task.stopRequested = true; task.controller.abort();
     if (detach) activeRequest = null;
-    if (task.chat.conversationId) {
-      try { const r = await request('/api/codex/cancel', {...task.scope,conversationId:task.chat.conversationId},null,detach); if (!r.ok) throw Error('停止请求未被确认，请检查连接状态。'); }
+    if (task.jobId || task.chat.conversationId) {
+      try { const r = await request('/api/codex/cancel', {...task.scope,...(task.jobId?{jobId:task.jobId}:{conversationId:task.chat.conversationId})},null,detach); if (!r.ok) throw Error('停止请求未被确认，请检查连接状态。'); }
       catch (e) { if (!detach && sameScope(task.scope)) error(e.message); }
     }
   }
   function prefill(text) {
     mode = 'chat'; session().draft = text.slice(0,8000); saveSession(session()); refreshStudy();
     const input = select('#coach-input'); if (input) { input.focus(); input.setSelectionRange(input.value.length,input.value.length); }
-    notice(local ? '问题已填好，确认后点击发送；不会自动替你发送。' : '问题已填好。可复制到官方 Codex；云端网页暂不直接调用本机账号。');
+    notice('问题已填好，确认后点击发送；不会自动替你发送。');
   }
   document.addEventListener('submit',e => {
     if (e.target.id?.startsWith('coach-') && !sameScope(scope())) { e.preventDefault(); return; }
@@ -230,7 +254,7 @@
       try { learning().grade(profileKey(), e.target.dataset.questionId, Number(chosen.value)); refreshStudy(); } catch (err) { error(err.message || '这道题暂时无法提交，请重试。'); }
     }
   });
-  document.addEventListener('keydown',e => { if (e.target.id === 'coach-input' && e.key === 'Enter' && !e.shiftKey && !e.isComposing && local) { e.preventDefault(); send(e.target.value); } });
+  document.addEventListener('keydown',e => { if (e.target.id === 'coach-input' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(e.target.value); } });
   document.addEventListener('input',e => {
     if (!sameScope(scope())) return;
     if (e.target.id === 'coach-input') { session().draft = e.target.value; saveSession(session()); }
@@ -267,5 +291,9 @@
   window.addEventListener('study-role-leaving', () => { stopCurrent(true); });
   window.addEventListener('pagehide', () => { pageLeaving = true; stopCurrent(true); });
   window.addEventListener('pageshow', () => { pageLeaving = false; updateMessages(); updateForm(); });
-  window.studyCoach = {render,mount() { updateMessages(); if (local && !status && !checking) check(); },getContextText:contextText};
+  window.studyCoach = {render,mount() { updateMessages(); if (!status && !checking) check(); },getContextText:contextText,prepare(text,target) {
+    const current=window.StudyApp?.getContext?.();
+    if(!current||pageLeaving||window.StudyRole?.isSwitching?.()||scopeKey(target)!==scopeKey(current)||sending())return false;
+    context=current;prefill(text);location.hash='coach';return true;
+  }};
 })();
