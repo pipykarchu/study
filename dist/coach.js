@@ -2,7 +2,7 @@
 (() => {
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const local = ['127.0.0.1', 'localhost'].includes(location.hostname);
-  const localUrl = 'http://127.0.0.1:4175/#coach';
+  const localUrl = `http://127.0.0.1:4175/?role=${window.StudyRole?.id === 'sheep' ? 'sheep' : 'apple'}#coach`;
   const select = s => document.querySelector(s);
   const fallbackStages = [
     {id:'frame',title:'知识框架',description:'先说清要解决什么问题、学到哪里就够用。'},
@@ -14,28 +14,34 @@
     {id:'review',title:'速查复习',description:'把关键方法压成速查表，再安排回忆与重测。'}
   ];
   let context = {}, token = null, status = null, checking = false, includeContext = true;
-  let activeRequest = null, mode = 'chat', feedback = '', sessionStorageAvailable = true;
+  let activeRequest = null, mode = 'chat', feedback = '', sessionStorageAvailable = true, pageLeaving = false;
   const sessions = new Map(), positions = new Map(), choices = new Map(), evidenceDrafts = new Map();
   const learning = () => window.StudyLearning;
   const profileKey = () => String(context.profileId || 'product');
-  const chatKey = key => window.StudyRole?.storageKey(`study-coach-chat-v2:${key}`)||`study-coach-chat-v2:${key}`;
+  const scope = () => ({roleId:context.roleId || window.StudyRole?.id || 'apple',profileId:profileKey()});
+  const scopeKey = (value = scope()) => `${value.roleId}:${value.profileId}`;
+  const sameScope = value => {
+    const current = window.StudyApp?.getContext?.() || scope();
+    return !pageLeaving && !window.StudyRole?.isSwitching?.() && scopeKey(value) === scopeKey() && scopeKey(value) === scopeKey(current);
+  };
+  const chatKey = value => `study-coach-chat-v2:${value.profileId}${value.roleId === 'sheep' ? ':sheep' : ''}`;
   const stages = () => learning()?.stages || fallbackStages;
   const snapshot = () => learning()?.get(profileKey()) || {stage:'frame',completedStages:[],quiz:{attempts:[],bestScore:null,lastScore:null},recentEvidence:[]};
   const stageInfo = () => stages().find(s => s.id === snapshot().stage) || stages()[0];
   const sending = () => Boolean(activeRequest);
   function session() {
-    const key = profileKey();
+    const target = scope(), key = scopeKey(target);
     if (!sessions.has(key)) {
       let saved = {};
-      try { saved = JSON.parse(sessionStorage.getItem(chatKey(key)) || '{}'); }
+      try { saved = JSON.parse(sessionStorage.getItem(chatKey(target)) || '{}'); }
       catch { sessionStorageAvailable = false; }
       const messages = Array.isArray(saved?.messages) ? saved.messages.filter(m => m && ['user','assistant'].includes(m.role) && typeof m.text === 'string').slice(-60).map(m => ({role:m.role,text:m.text.slice(0,80000),error:Boolean(m.error)})) : [];
-      sessions.set(key, {messages, conversationId:null, draft:typeof saved?.draft === 'string' ? saved.draft.slice(0,8000) : ''});
+      sessions.set(key, {scope:target,messages, conversationId:null, draft:typeof saved?.draft === 'string' ? saved.draft.slice(0,8000) : ''});
     }
     return sessions.get(key);
   }
-  function saveSession(key, value) {
-    try { sessionStorage.setItem(chatKey(key), JSON.stringify({messages:value.messages.slice(-60),draft:value.draft})); }
+  function saveSession(value) {
+    try { sessionStorage.setItem(chatKey(value.scope), JSON.stringify({messages:value.messages.slice(-60),draft:value.draft})); }
     catch { sessionStorageAvailable = false; }
   }
   function contextText() {
@@ -90,7 +96,7 @@
     return `<span>${local ? 'Enter 发送 · Shift + Enter 换行' : '先写问题，再复制到旁边的 Codex 对话'}</span><div class="coach-send-buttons"><button type="button" class="text-button" data-coach-action="copy-prompt">复制问题</button>${sending() ? '<button type="button" class="button secondary small" data-coach-action="stop">停止回答</button>' : `<button type="submit" class="button primary small" id="coach-send" ${!local || !status?.authenticated ? 'disabled' : ''}>发送给我的 Codex ↗</button>`}</div>`;
   }
   function evidencePanel() {
-    const st = stageInfo(), key = `${profileKey()}:${st.id}`;
+    const st = stageInfo(), key = `${scopeKey()}:${st.id}`;
     if (st.id === 'quiz') return '<div class="coach-evidence-note">测验阶段由完整测试成绩记录完成，不能手动勾选。错题复测用于补漏，不代替完整测验。</div>';
     const previous = snapshot().recentEvidence.slice().reverse().find(e => e.stage === st.id || e.stageId === st.id);
     return `<form id="coach-evidence-form" class="coach-evidence"><label for="coach-evidence"><strong>留下自己的学习证据</strong><span>写下你的框架、练习结果、作品说明或复述。记录完成不代表 AI 已验证掌握。</span></label>${previous ? `<details class="coach-saved-evidence"><summary>查看这一步最近的产出</summary><p>${escape(previous.text)}</p></details>` : ''}<textarea id="coach-evidence" rows="2" maxlength="2000" placeholder="例如：我能用自己的话解释……；我做出了……，验收结果是……">${escape(evidenceDrafts.get(key) || '')}</textarea><div class="coach-evidence-actions"><small>${previous ? '这一步已有记录，可以补充新的产出。' : '先留下一条自己的产出，再记录这一步。'}</small><button type="submit" class="button secondary small">记录完成这一步 ✓</button></div></form>`;
@@ -109,10 +115,10 @@
     const q = learning()?.getQuiz(profileKey());
     if (q?.finished) return quizSummary(q);
     if (!q || !q.questions?.length) return `<div class="coach-test-intro"><span class="coach-summary-flower" aria-hidden="true">✎</span><div class="section-kicker">CHECK WHAT YOU CAN RECALL</div><h2>不看答案，才知道哪里需要再练</h2><p>围绕当前学习方向，做一轮覆盖知识节点的小测验。每题提交后才显示答案和解释；完成整轮后记录真实成绩。</p><div class="coach-test-rules"><span>每次一道题</span><span>提交后看解析</span><span>答错进入错题本</span></div><button class="button primary" data-coach-action="quiz-start" ${!learning() ? 'disabled' : ''}>开始完整模拟测验 ↗</button><p class="coach-source-note">模拟题是本站练习参考题，不是视频原题。学习方法不保证“10 倍”效果。</p></div>`;
-    let position = positions.get(profileKey());
-    if (!Number.isInteger(position) || position >= q.questions.length) { position = q.questions.findIndex(item => !(q.answers || []).some(a => a.questionId === item.id)); if (position < 0) position = q.questions.length - 1; positions.set(profileKey(), position); }
+    let position = positions.get(scopeKey());
+    if (!Number.isInteger(position) || position >= q.questions.length) { position = q.questions.findIndex(item => !(q.answers || []).some(a => a.questionId === item.id)); if (position < 0) position = q.questions.length - 1; positions.set(scopeKey(), position); }
     const item = q.questions[position], answer = (q.answers || []).find(a => a.questionId === item.id);
-    const selected = answer ? answer.choiceIndex : choices.get(`${q.id}:${item.id}`);
+    const selected = answer ? answer.choiceIndex : choices.get(`${scopeKey()}:${q.id}:${item.id}`);
     return `<div class="coach-test-question"><div class="coach-test-topline"><span>${q.kind === 'review' ? '错题复测' : '完整模拟测验'}</span><span>第 ${position + 1} / ${q.questions.length} 题 · 已答 ${q.answered || 0} 题</span></div><div class="coach-test-progress" role="progressbar" aria-label="本轮答题进度" aria-valuenow="${q.answered || 0}" aria-valuemin="0" aria-valuemax="${q.questions.length}"><span style="width:${(q.answered || 0) / q.questions.length * 100}%"></span></div><span class="coach-question-node">${escape(nodeName(item.nodeIndex))}</span><h2>${escape(item.prompt)}</h2><form id="coach-quiz-form" data-question-id="${escape(item.id)}"><fieldset class="coach-options" ${answer ? 'disabled' : ''}><legend class="sr-only">选择一个答案</legend>${item.options.map((text,i) => `<label class="coach-option ${answer && i === answer.correctIndex ? 'is-correct' : ''} ${answer && i === answer.choiceIndex && !answer.correct ? 'is-wrong' : ''}"><input type="radio" name="coach-answer" value="${i}" ${selected === i ? 'checked' : ''}><span class="coach-option-letter">${String.fromCharCode(65 + i)}</span><span>${escape(text)}</span>${answer && i === answer.correctIndex ? '<span class="coach-answer-mark">✓</span>' : ''}</label>`).join('')}</fieldset>${answer ? `<div class="coach-answer-feedback ${answer.correct ? 'correct' : 'incorrect'}" role="status"><strong>${answer.correct ? '✓ 这道题答对了' : '这道题还需要再想一想'}</strong><p>${escape(answer.explanation)}</p>${!answer.correct ? '<small>已放入错题本；答错不会算作通过。</small>' : ''}</div><div class="coach-test-actions">${position < q.questions.length - 1 ? '<button type="button" class="button primary" data-coach-action="quiz-next">下一题 →</button>' : '<button type="button" class="button primary" data-coach-action="quiz-finish">查看本轮成绩</button>'}${position > 0 ? '<button type="button" class="button secondary" data-coach-action="quiz-back">上一题</button>' : ''}</div>` : `<div class="coach-test-actions"><button type="submit" class="button primary" id="coach-quiz-submit" ${selected === undefined ? 'disabled' : ''}>提交这一题</button><span class="coach-test-hint">先选一个答案，提交后才会显示解析。</span></div>`}</form><p class="coach-source-note">本站练习参考题 · 每题只计首次提交 · 可离开页面后继续本轮</p></div>`;
   }
   function reviewPanel() {
@@ -128,8 +134,8 @@
   }
   function modeContent() { return mode === 'quiz' ? quizPanel() : mode === 'review' ? reviewPanel() : chatPanel(); }
   function render(data) {
-    const previous = profileKey(); context = data || {};
-    if (previous !== profileKey()) { if (activeRequest) stopCurrent(); feedback = ''; }
+    const previous = scopeKey(); context = data || {};
+    if (previous !== scopeKey()) { if (activeRequest) stopCurrent(true); feedback = ''; }
     session();
     return `<section class="page-heading coach-page-heading"><div><div class="eyebrow">GROW AT YOUR OWN PACE</div><h1>和自己的 Codex，一点点学会 <span class="heading-flower">✿</span></h1><p class="heading-description">先定知识边界，再通过对话、练习和真实产出，把方法变成自己的。</p></div><button class="button secondary" data-coach-action="new" ${sending() ? 'disabled' : ''}>＋ 新对话</button></section><div id="coach-connection">${connection()}</div><div class="coach-layout coach-learning-layout" id="coach-workbench"><section class="coach-chat panel" aria-label="对话式学习与模拟测试"><div class="coach-mode-tabs" role="tablist" aria-label="学习方式">${[['chat','学习对话','☁'],['quiz','模拟测试','✎'],['review','错题复习','↺']].map(([id,title,icon]) => `<button role="tab" id="coach-tab-${id}" aria-controls="coach-mode-content" aria-selected="${mode === id}" data-coach-action="mode" data-mode="${id}" class="${mode === id ? 'active' : ''}"><span aria-hidden="true">${icon}</span>${title}</button>`).join('')}</div><div class="coach-notice" id="coach-notice" role="status" ${feedback ? '' : 'hidden'}>${escape(feedback)}</div><div class="coach-error" id="coach-error" role="alert" hidden></div><div id="coach-mode-content" role="tabpanel" aria-labelledby="coach-tab-${mode}">${modeContent()}</div></section><aside class="coach-context coach-learning-progress panel" id="coach-progress" aria-label="我的学习进度">${sidebar()}</aside></div><p class="coach-method-caption">知识框架 → 抓住核心 → 分段练习 → 模拟测验 → 项目应用 → 费曼复述 → 速查复习。这里把方法变成可操作的步骤；练习题为本站整理，不是视频原题，也不承诺“10 倍”学习效果。</p>`;
   }
@@ -150,7 +156,7 @@
   }
   function notice(message) { feedback = message; const el = select('#coach-notice'); if (el) { el.textContent = message; el.hidden = !message; } }
   function error(message) { const el = select('#coach-error'); if (el) { el.textContent = message; el.hidden = false; } }
-  async function request(path, body, signal) { return fetch(path, {method:'POST',headers:{'Content-Type':'application/json','X-Study-Token':token || ''},body:JSON.stringify(body),...(signal ? {signal} : {})}); }
+  async function request(path, body, signal, keepalive = false) { return fetch(path, {method:'POST',headers:{'Content-Type':'application/json','X-Study-Token':token || ''},body:JSON.stringify(body),...(signal ? {signal} : {}),...(keepalive ? {keepalive:true} : {})}); }
   async function check() {
     if (!local || checking) return;
     checking = true; const panel = select('#coach-connection'); if (panel) panel.innerHTML = connection();
@@ -165,25 +171,27 @@
     finally { clearTimeout(timeout); checking = false; const panel = select('#coach-connection'); if (panel) panel.innerHTML = connection(); updateForm(); }
   }
   async function send(text) {
-    if (sending() || !local) return;
+    if (sending() || !local || !sameScope(scope())) return;
     if (!status?.authenticated) { error('先检查连接，确认本机 Codex 已登录。'); return; }
     text = text.trim(); if (!text) return;
-    const key = profileKey(), chat = session(), controller = new AbortController();
-    const task = {controller,chat,key,stopRequested:false}; activeRequest = task;
+    const target = scope(), chat = session(), controller = new AbortController();
+    const task = {controller,chat,scope:target,stopRequested:false}; activeRequest = task;
     const err = select('#coach-error'); if (err) err.hidden = true;
     chat.draft = ''; const input = select('#coach-input'); if (input) input.value = '';
     chat.messages.push({role:'user',text},{role:'assistant',text:''}); const answer = chat.messages[chat.messages.length - 1];
-    const promptContext = contextText(); saveSession(key,chat); updateMessages(); updateForm();
+    const promptContext = contextText(); saveSession(chat); updateMessages(); updateForm();
     let terminal = false;
     try {
-      const r = await request('/api/codex/chat', {message:text,context:promptContext,...(chat.conversationId ? {conversationId:chat.conversationId} : {})},controller.signal);
+      const r = await request('/api/codex/chat', {...target,message:text,context:promptContext,...(chat.conversationId ? {conversationId:chat.conversationId} : {})},controller.signal);
+      if (task.stopRequested || !sameScope(target)) throw new DOMException('已离开这段对话。','AbortError');
       if (!r.ok) { let detail; try { detail = await r.json(); } catch {} throw Error(detail?.message || detail?.error || `本机服务暂时无法回答（${r.status}），请检查连接后重试。`); }
       if (!r.body) throw Error('浏览器没有收到回答数据，请重试。');
       const reader = r.body.getReader(), decoder = new TextDecoder(); let buffer = '';
       function handle(line) {
+        if (task.stopRequested || !sameScope(target)) throw new DOMException('已离开这段对话。','AbortError');
         if (!line.trim()) return; const event = JSON.parse(line);
         if (event.type === 'conversation') chat.conversationId = event.conversationId;
-        else if (event.type === 'delta') { answer.text += event.text || ''; if (key === profileKey()) updateMessages(); }
+        else if (event.type === 'delta') { answer.text += event.text || ''; if (sameScope(target)) updateMessages(); }
         else if (event.type === 'done') terminal = true;
         else if (event.type === 'error') throw Error(event.message || '这次回答没有完成。');
       }
@@ -192,28 +200,30 @@
       if (!terminal) throw Error('连接中断了，已收到的回答保留在上面。');
     } catch (e) {
       if (e.name === 'AbortError' && task.stopRequested) { if (!answer.text) answer.text = '这次回答已停止。'; }
-      else { answer.error = true; if (!answer.text) answer.text = '这次没有收到完整回答。'; if (key === profileKey()) error(e.message); }
-    } finally { controller.abort(); if (activeRequest === task) activeRequest = null; saveSession(key,chat); updateMessages(); updateForm(); }
+      else { answer.error = true; if (!answer.text) answer.text = '这次没有收到完整回答。'; if (sameScope(target)) error(e.message); }
+    } finally { controller.abort(); if (activeRequest === task) activeRequest = null; saveSession(chat); if (sameScope(target)) { updateMessages(); updateForm(); } }
   }
-  async function stopCurrent() {
+  async function stopCurrent(detach = false) {
     const task = activeRequest; if (!task) return; task.stopRequested = true; task.controller.abort();
+    if (detach) activeRequest = null;
     if (task.chat.conversationId) {
-      try { const r = await request('/api/codex/cancel', {conversationId:task.chat.conversationId}); if (!r.ok) throw Error('停止请求未被确认，请检查连接状态。'); }
-      catch (e) { if (task.key === profileKey()) error(e.message); }
+      try { const r = await request('/api/codex/cancel', {...task.scope,conversationId:task.chat.conversationId},null,detach); if (!r.ok) throw Error('停止请求未被确认，请检查连接状态。'); }
+      catch (e) { if (!detach && sameScope(task.scope)) error(e.message); }
     }
   }
   function prefill(text) {
-    mode = 'chat'; session().draft = text.slice(0,8000); saveSession(profileKey(),session()); refreshStudy();
+    mode = 'chat'; session().draft = text.slice(0,8000); saveSession(session()); refreshStudy();
     const input = select('#coach-input'); if (input) { input.focus(); input.setSelectionRange(input.value.length,input.value.length); }
     notice(local ? '问题已填好，确认后点击发送；不会自动替你发送。' : '问题已填好。可复制到官方 Codex；云端网页暂不直接调用本机账号。');
   }
   document.addEventListener('submit',e => {
+    if (e.target.id?.startsWith('coach-') && !sameScope(scope())) { e.preventDefault(); return; }
     if (e.target.id === 'coach-form') { e.preventDefault(); send(select('#coach-input').value); }
     else if (e.target.id === 'coach-evidence-form') {
       e.preventDefault(); const value = select('#coach-evidence').value.trim(), st = stageInfo();
       if (!value) { error('先写一条自己的产出或复述，再记录这一步。'); select('#coach-evidence').focus(); return; }
       if (!learning()) { error('学习记录暂时未就绪，请刷新后重试。'); return; }
-      try { learning().completeStage(profileKey(),st.id,value); evidenceDrafts.delete(`${profileKey()}:${st.id}`); refreshStudy(); notice(`已保存“${st.title}”的产出记录。下一步可以选择新的学习阶段。`); }
+      try { learning().completeStage(profileKey(),st.id,value); evidenceDrafts.delete(`${scopeKey()}:${st.id}`); refreshStudy(); notice(`已保存“${st.title}”的产出记录。下一步可以选择新的学习阶段。`); }
       catch (err) { error(err.message || '这一步暂时无法保存，请重试。'); }
     } else if (e.target.id === 'coach-quiz-form') {
       e.preventDefault(); const chosen = e.target.querySelector('input[name="coach-answer"]:checked'); if (!chosen || !learning()) return;
@@ -222,32 +232,40 @@
   });
   document.addEventListener('keydown',e => { if (e.target.id === 'coach-input' && e.key === 'Enter' && !e.shiftKey && !e.isComposing && local) { e.preventDefault(); send(e.target.value); } });
   document.addEventListener('input',e => {
-    if (e.target.id === 'coach-input') { session().draft = e.target.value; saveSession(profileKey(),session()); }
-    if (e.target.id === 'coach-evidence') evidenceDrafts.set(`${profileKey()}:${stageInfo().id}`,e.target.value);
+    if (!sameScope(scope())) return;
+    if (e.target.id === 'coach-input') { session().draft = e.target.value; saveSession(session()); }
+    if (e.target.id === 'coach-evidence') evidenceDrafts.set(`${scopeKey()}:${stageInfo().id}`,e.target.value);
   });
   document.addEventListener('change',e => {
+    if (!sameScope(scope())) return;
     if (e.target.id === 'coach-context-toggle') includeContext = e.target.checked;
-    if (e.target.name === 'coach-answer') { const q = learning()?.getQuiz(profileKey()), form = select('#coach-quiz-form'); if (q && form) choices.set(`${q.id}:${form.dataset.questionId}`,Number(e.target.value)); const button = select('#coach-quiz-submit'); if (button) button.disabled = false; }
+    if (e.target.name === 'coach-answer') { const q = learning()?.getQuiz(profileKey()), form = select('#coach-quiz-form'); if (q && form) choices.set(`${scopeKey()}:${q.id}:${form.dataset.questionId}`,Number(e.target.value)); const button = select('#coach-quiz-submit'); if (button) button.disabled = false; }
   });
   document.addEventListener('click',async e => {
     const b = e.target.closest('[data-coach-action]'); if (!b || b.disabled) return; const action = b.dataset.coachAction;
+    if (!sameScope(scope())) return;
     if (action === 'retry') check();
     else if (action === 'mode') { mode = b.dataset.mode; feedback = ''; notice(''); refreshStudy(); }
     else if (action === 'stage') { learning()?.setStage(profileKey(),b.dataset.stage); mode = 'chat'; notice(''); refreshStudy(); }
     else if (action === 'stage-prompt') prefill(promptFor(stageInfo().id));
     else if (action === 'question-start') prefill(`针对“${context.goal || '我的学习目标'}”，请先问我一个能判断学习起点的问题，先不要讲答案。`);
     else if (action === 'copy-prompt') {
+      const target = scope();
       const text = session().draft.trim(); if (!text) { notice('先写一个问题，或点击“填入这一步的提问”。'); return; }
-      try { await navigator.clipboard.writeText(text); notice('已复制，可以粘贴到你自己的官方 Codex 对话。'); }
-      catch { const input = select('#coach-input'); if (input) { input.focus(); input.select(); } notice('浏览器未允许自动复制，已选中问题，请手动复制。'); }
-    } else if (action === 'new' && !sending()) { const chat = session(); chat.messages = []; chat.conversationId = null; chat.draft = ''; saveSession(profileKey(),chat); const err = select('#coach-error'); if (err) err.hidden = true; refreshStudy(); notice('新对话已开始；已记录的学习进度与测验成绩继续保留。'); }
+      try { await navigator.clipboard.writeText(text); if (sameScope(target)) notice('已复制，可以粘贴到你自己的官方 Codex 对话。'); }
+      catch { if (!sameScope(target)) return; const input = select('#coach-input'); if (input) { input.focus(); input.select(); } notice('浏览器未允许自动复制，已选中问题，请手动复制。'); }
+    } else if (action === 'new' && !sending()) { const chat = session(); chat.messages = []; chat.conversationId = null; chat.draft = ''; saveSession(chat); const err = select('#coach-error'); if (err) err.hidden = true; refreshStudy(); notice('新对话已开始；已记录的学习进度与测验成绩继续保留。'); }
     else if (action === 'stop') { b.disabled = true; b.textContent = '正在停止…'; stopCurrent(); }
     else if (action === 'quiz-start' || action === 'review-start') {
-      if (!learning()) return; positions.set(profileKey(),0); mode = 'quiz';
+      if (!learning()) return; positions.set(scopeKey(),0); mode = 'quiz';
       try { if (action === 'review-start') learning().startReview(profileKey()); else learning().startQuiz(profileKey()); refreshStudy(); notice('新一轮已开始。先自己作答，再看解释。'); } catch (err) { error(err.message || '暂时无法开始测验，请重试。'); }
-    } else if (action === 'quiz-next' || action === 'quiz-back') { positions.set(profileKey(),Math.max(0,(positions.get(profileKey()) || 0) + (action === 'quiz-next' ? 1 : -1))); refreshStudy(); }
+    } else if (action === 'quiz-next' || action === 'quiz-back') { positions.set(scopeKey(),Math.max(0,(positions.get(scopeKey()) || 0) + (action === 'quiz-next' ? 1 : -1))); refreshStudy(); }
     else if (action === 'quiz-finish') { const result = learning()?.finishQuiz(profileKey()); if (!result?.completed) { error('还有未提交的题目，完成全部作答后再查看成绩。'); return; } refreshStudy(); notice('本轮成绩已按实际提交记录。'); }
   });
   window.addEventListener('study-learning-change', e => { if (!e.detail?.profile || e.detail.profile === profileKey()) refreshStudy(); });
+  window.addEventListener('study-app-change', () => { if (activeRequest && !sameScope(activeRequest.scope)) stopCurrent(true); });
+  window.addEventListener('study-role-leaving', () => { stopCurrent(true); });
+  window.addEventListener('pagehide', () => { pageLeaving = true; stopCurrent(true); });
+  window.addEventListener('pageshow', () => { pageLeaving = false; updateMessages(); updateForm(); });
   window.studyCoach = {render,mount() { updateMessages(); if (local && !status && !checking) check(); },getContextText:contextText};
 })();

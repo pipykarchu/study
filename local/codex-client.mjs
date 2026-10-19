@@ -32,6 +32,13 @@ export class StudyError extends Error {
   }
 }
 
+export function learningScope({ roleId, profileId } = {}) {
+  if (!['apple', 'sheep'].includes(roleId) || !['product', 'coding', 'custom', 'fde'].includes(profileId)) {
+    throw new StudyError('学习角色或方向已变化，请刷新后重新提问。', 400, 'learning_scope');
+  }
+  return `${roleId}:${profileId}`;
+}
+
 function turnFailure(error) {
   if (error?.codexErrorInfo === 'serverOverloaded' || (typeof error?.message === 'string' && /Selected model is at capacity/i.test(error.message))) {
     return new StudyError('当前 Codex 模型繁忙，请稍后重试。', 503, 'codex_busy');
@@ -441,9 +448,11 @@ export class CodexClient {
     }
   }
 
-  async chat({ message, context = '', conversationId }, emit) {
+  async chat({ message, context = '', conversationId, roleId, profileId }, emit) {
+    const scope = learningScope({ roleId, profileId });
     if (this.busy) throw new StudyError('学习教练正在回答，请等回答结束后再发。', 409, 'busy');
     if (conversationId && !this.conversations.has(conversationId)) throw new StudyError('这段对话已失效，请点新对话重新开始。', 404, 'conversation_expired');
+    if (conversationId && this.conversations.get(conversationId).scope !== scope) throw new StudyError('这段对话属于另一角色或学习方向，请新建对话。', 409, 'conversation_scope');
     const publicId = conversationId || randomUUID();
     let resolveCompletion;
     let rejectCompletion;
@@ -451,7 +460,7 @@ export class CodexClient {
     // Attach a rejection handler immediately, including failures while initialization is pending.
     completion.catch(() => {});
     const active = {
-      publicId, threadId: this.conversations.get(publicId) || null, turnId: null,
+      publicId, scope, threadId: this.conversations.get(publicId)?.threadId || null, turnId: null,
       cancelled: false, finished: false, emit, itemText: new Map(), timer: null,
       finish: (error) => {
         if (active.finished) return;
@@ -484,7 +493,7 @@ export class CodexClient {
       if (typeof thread?.model === 'string') this.model = thread.model;
       active.threadId = thread?.thread?.id;
       if (!active.threadId) throw new StudyError('Codex 没有建立对话，请重试。');
-      this.conversations.set(publicId, active.threadId);
+      this.conversations.set(publicId, { threadId:active.threadId, scope });
       if (this.conversations.size > 100) this.conversations.delete(this.conversations.keys().next().value);
       if (active.finished || active.cancelled) throw new StudyError('已停止这次回答。', 503, 'cancelled');
       await this.verifyOwnerAccount();
@@ -523,9 +532,9 @@ export class CodexClient {
     });
   }
 
-  cancel(conversationId) {
+  cancel(conversationId, target) {
     const active = this.active;
-    if (!active || active.publicId !== conversationId) return false;
+    if (!active || active.publicId !== conversationId || active.scope !== learningScope(target)) return false;
     active.cancelled = true;
     if (!active.turnId) {
       active.finish(new StudyError('已停止这次回答。', 503, 'cancelled'));

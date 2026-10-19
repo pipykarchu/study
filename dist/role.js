@@ -14,7 +14,7 @@
   try { remembered = global.sessionStorage.getItem(SESSION_KEY); } catch (_) { /* URL 仍能固定当前角色。 */ }
   const id = explicit ? chosen[0] : chosen.length === 0 && Object.prototype.hasOwnProperty.call(roles, remembered) ? remembered : 'apple';
   const current = roles[id];
-  let dialog, busy = false, notice = chosen.length && !explicit ? '网址里的角色无效，请重新选择。' : '';
+  let dialog, busy = false, leaving = false, notice = chosen.length && !explicit ? '网址里的角色无效，请重新选择。' : '';
   const needsChoice = !explicit && !Object.prototype.hasOwnProperty.call(roles, remembered);
   if (explicit) { try { global.sessionStorage.setItem(SESSION_KEY, id); } catch (_) {} }
 
@@ -49,9 +49,11 @@
   }
   async function choose(next) {
     if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅或小羊。');
-    if (busy) return false;
+    if (busy || leaving) return false;
     if (next === id && explicit) { close(); return true; }
     busy = true;
+    leaving = true;
+    global.dispatchEvent(new global.CustomEvent('study-role-leaving', {detail: {roleId: id, nextRoleId: next}}));
     for (const button of dialog?.querySelectorAll('[data-role]') || []) button.disabled = true;
     let saved = false;
     try {
@@ -64,6 +66,7 @@
       } catch (_) { /* 离线或冲突时，当前角色的本地草稿仍独立保留。 */ }
       const status = global.StudySync?.status();
       if (!saved && status?.dirty && !localDraftAvailable()) {
+        leaving = false;
         showNotice('当前记录尚未同步，浏览器也无法保留草稿。请先在资料页导出备份，再切换角色。');
         return false;
       }
@@ -76,9 +79,12 @@
       // 整页切换，避免内存中的测验、同步队列或 Codex 工具串到另一角色。
       global.location.assign(urlFor(next));
       return true;
+    } catch (error) {
+      leaving = false;
+      throw error;
     } finally {
       busy = false;
-      for (const button of dialog?.querySelectorAll('[data-role]') || []) button.disabled = false;
+      for (const button of dialog?.querySelectorAll('[data-role]') || []) button.disabled = leaving;
     }
   }
   function show() {
@@ -110,7 +116,7 @@
     dialog.id = 'study-role-dialog'; dialog.className = 'study-role-dialog';
     const heading = global.document.createElement('div'); heading.className = 'role-picker-heading';
     const title = global.document.createElement('h2'); title.id = 'study-role-title'; title.textContent = '今天是谁来学习？';
-    const intro = global.document.createElement('p'); intro.textContent = '用你的同一个 Codex 账号，为两个人分别保留目标、知识框架和进度。';
+    const intro = global.document.createElement('p'); intro.textContent = '用你的同一个 Codex 账号，分别保存目标、知识框架、笔记和测验。可以切换查看两个角色的记录。';
     heading.append(title, intro); dialog.appendChild(heading); dialog.setAttribute('aria-labelledby', title.id);
     const list = global.document.createElement('div'); list.className = 'role-picker-list';
     for (const role of Object.values(roles)) {
@@ -128,7 +134,8 @@
     const dismiss = global.document.createElement('button'); dismiss.type = 'button'; dismiss.className = 'text-button'; dismiss.textContent = '继续使用' + current.name; dismiss.addEventListener('click', close); dialog.appendChild(dismiss);
     global.document.body.appendChild(dialog);
   }
-  global.StudyRole = Object.freeze({...current, storageKey, endpoint, urlFor, choose, show, mount});
+  global.StudyRole = Object.freeze({...current, storageKey, endpoint, urlFor, choose, show, mount, isSwitching: () => leaving});
+  global.addEventListener('pageshow', event => { if (event.persisted) { leaving = false; busy = false; for (const button of dialog?.querySelectorAll('[data-role]') || []) button.disabled = false; close(); } });
   const ready = () => { mount(); if (needsChoice || chosen.length && !explicit) show(); };
   if (global.document.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', ready, {once: true});
   else ready();

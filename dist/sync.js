@@ -1,6 +1,7 @@
 /* 学习记录通过本站的同源接口同步；登录凭据由站点管理，不进入网页存储。 */
 (function (global) {
   'use strict';
+  const ROLE_ID = global.StudyRole?.id || 'apple';
   const roleKey = base => global.StudyRole?.storageKey(base) || base;
   const META_KEY = roleKey('study-bloom-cloud-sync-v1');
   const APP_KEY = roleKey('study-bloom-v1');
@@ -12,10 +13,16 @@
   const clone = value => JSON.parse(JSON.stringify(value));
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const validRevision = value => Number.isSafeInteger(value) && value >= 0;
-  let meta = {version: 1, revision: null, dirty: false, baseline: null, backup: null};
+  let meta = {version: 1, roleId: ROLE_ID, revision: null, dirty: false, baseline: null, backup: null};
   let state = localOnly ? 'ready' : 'loading', verified = false, updatedAt = null;
   let error = '', conflict = null, generation = 0, suppress = 0, storageWarning = false;
   let debounce, peerTimer, lastCheck = 0, operation = Promise.resolve();
+  let active = true, pageEpoch = 0;
+  const requests = new Set();
+
+  function assertActive(epoch = pageEpoch) {
+    if (!active || epoch !== pageEpoch || (global.StudyRole?.id || 'apple') !== ROLE_ID) throw fault('角色页面已切换，请回到当前角色后重试。', 'inactive');
+  }
 
   function snapshot() {
     if (!global.StudyApp || !global.StudyLearning) throw new Error('学习页面尚未准备好，请刷新后重试。');
@@ -36,12 +43,12 @@
   function readMeta() {
     try {
       const raw = JSON.parse(global.localStorage.getItem(META_KEY) || 'null');
-      if (!raw || raw.version !== 1 || !(raw.revision === null || validRevision(raw.revision)) || typeof raw.dirty !== 'boolean') return;
+      if (!raw || raw.version !== 1 || (raw.roleId !== undefined && raw.roleId !== ROLE_ID) || !(raw.revision === null || validRevision(raw.revision)) || typeof raw.dirty !== 'boolean') return;
       const baseline = raw.baseline === null ? null : validate(raw.baseline);
       if (raw.revision !== null && !baseline) return;
       let backup = null;
       if (raw.backup && Number.isFinite(raw.backup.savedAt) && typeof raw.backup.reason === 'string') backup = {state: validate(raw.backup.state), savedAt: raw.backup.savedAt, reason: raw.backup.reason.slice(0, 100)};
-      meta = {version: 1, revision: raw.revision, dirty: raw.dirty, baseline, backup};
+      meta = {version: 1, roleId: ROLE_ID, revision: raw.revision, dirty: raw.dirty, baseline, backup};
     } catch (_) { storageWarning = true; }
   }
   function persist() {
@@ -49,7 +56,7 @@
     catch (_) { storageWarning = true; }
   }
   function status() {
-    return {mode: localOnly ? 'local' : 'cloud', roleId: global.StudyRole?.id || 'apple', state, verified, revision: meta.revision, dirty: meta.dirty, cloudSaved: !localOnly && verified && state === 'ready' && !meta.dirty && !conflict, updatedAt, error, conflict: Boolean(conflict), backupAvailable: Boolean(meta.backup), storageWarning};
+    return {mode: localOnly ? 'local' : 'cloud', roleId: ROLE_ID, state, verified, revision: meta.revision, dirty: meta.dirty, cloudSaved: active && !localOnly && verified && state === 'ready' && !meta.dirty && !conflict, updatedAt, error, conflict: Boolean(conflict), backupAvailable: Boolean(meta.backup), storageWarning};
   }
   function notify() {
     mount();
@@ -60,6 +67,7 @@
     persist();
   }
   function apply(data) {
+    assertActive();
     const clean = validate(data);
     suppress++;
     try { global.StudyLearning.importData(clean.learning); global.StudyApp.importData(clean.app); }
@@ -81,13 +89,17 @@
     persist(); notify();
   }
   function enqueue(fn) {
-    const next = operation.catch(() => undefined).then(fn);
+    const epoch = pageEpoch;
+    const next = operation.catch(() => undefined).then(() => { assertActive(epoch); return fn(); });
     operation = next.catch(() => undefined);
     return next;
   }
   function fault(message, kind) { const e = new Error(message); e.kind = kind; return e; }
   async function request(method, payload) {
+    assertActive();
+    const epoch = pageEpoch;
     const controller = new global.AbortController();
+    requests.add(controller);
     const timeout = global.setTimeout(() => controller.abort(), 12000);
     try {
       const response = await global.fetch(ENDPOINT, {method, credentials: 'same-origin', cache: 'no-store', signal: controller.signal, headers: payload ? {'Accept': 'application/json', 'Content-Type': 'application/json'} : {'Accept': 'application/json'}, ...(payload ? {body: JSON.stringify(payload)} : {})});
@@ -95,7 +107,9 @@
       if (!response.ok && response.status !== 409) throw fault('暂时连不上云端，学习草稿已留在此浏览器。请稍后重试。', 'offline');
       let raw;
       try { raw = await response.json(); } catch (_) { throw fault('云端没有返回有效的学习记录，本机草稿已保留。', 'offline'); }
+      assertActive(epoch);
       if (!raw || !raw.identity || raw.identity.verified !== true || raw.identity.owner !== true) throw fault('未能确认站点所有者身份，本机草稿已保留。', 'unauthorized');
+      if (raw.roleId !== ROLE_ID) throw fault('云端返回的角色与当前角色不一致，已停止同步并保留本机草稿。', 'role_mismatch');
       if (!validRevision(raw.revision) || !(raw.state === null || (raw.state && typeof raw.state === 'object'))) throw fault('云端记录版本无效，本机草稿已保留。', 'offline');
       let clean;
       try { clean = raw.state === null ? null : validate(raw.state); } catch (e) { throw fault(e.message, 'offline'); }
@@ -103,13 +117,15 @@
       if (method === 'GET') lastCheck = Date.now();
       return {revision: raw.revision, state: clean, updatedAt: typeof raw.updatedAt === 'string' || Number.isFinite(raw.updatedAt) ? raw.updatedAt : null, collision: response.status === 409};
     } catch (e) {
+      assertActive(epoch);
       if (e.kind) throw e;
       throw fault('网络未连接，学习草稿已留在此浏览器。恢复网络后可继续同步。', 'offline');
-    } finally { global.clearTimeout(timeout); }
+    } finally { global.clearTimeout(timeout); requests.delete(controller); }
   }
   function failed(e) {
+    if (e.kind === 'inactive') return;
     state = e.kind === 'unauthorized' ? 'unauthorized' : 'offline';
-    if (state === 'unauthorized') verified = false;
+    if (state === 'unauthorized' || e.kind === 'role_mismatch') verified = false;
     error = e.message || '暂时无法同步，本机草稿已保留。'; persist(); notify();
   }
   function reconcile(remote) {
@@ -145,7 +161,7 @@
     const submitted = snapshot(), sentGeneration = generation;
     state = 'syncing'; error = ''; notify();
     let remote;
-    try { remote = await request('PUT', {baseRevision: meta.revision, snapshot: submitted}); }
+    try { remote = await request('PUT', {roleId: ROLE_ID, baseRevision: meta.revision, snapshot: submitted}); }
     catch (e) { failed(e); throw e; }
     if (remote.collision) {
       if (remote.state && same(snapshot(), remote.state)) { adopt(remote, snapshot()); return status(); }
@@ -165,7 +181,7 @@
     debounce = global.setTimeout(() => { flush().catch(() => undefined); }, 700);
   }
   function changed() {
-    if (suppress) return;
+    if (suppress || !active) return;
     generation++;
     try { meta.dirty = !meta.baseline || !same(snapshot(), meta.baseline); }
     catch (e) { error = e.message; }
@@ -173,6 +189,7 @@
   }
   async function ensureWritable() {
     await ready;
+    assertActive();
     if (localOnly) throw fault('此处只保存本机记录，请在 Codex 中打开私人云端网站后使用同步学习工具。', 'local');
     if (!verified || state === 'unauthorized') throw fault('请先用站点所有者账号登录私人网站。', 'unauthorized');
     if (conflict) throw fault('云端和本机都有更新，请先在网页选择保留哪一份记录。', 'conflict');
@@ -220,7 +237,7 @@
   }
   function downloadBackup() {
     if (!meta.backup) return;
-    const data = {...meta.backup.state.app, roleId: global.StudyRole?.id || 'apple', learning: meta.backup.state.learning};
+    const data = {...meta.backup.state.app, roleId: ROLE_ID, learning: meta.backup.state.learning};
     const url = global.URL.createObjectURL(new global.Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
     const link = global.document.createElement('a'); link.href = url; link.download = '知芽-同步冲突保留副本.json'; link.click(); global.URL.revokeObjectURL(url);
   }
@@ -239,9 +256,10 @@
     if (meta.backup) button('下载保留副本', downloadBackup);
   }
   function peerChanged(event) {
-    if (![APP_KEY, LEARNING_KEY, META_KEY].includes(event.key)) return;
+    if (!active || ![APP_KEY, LEARNING_KEY, META_KEY].includes(event.key)) return;
     global.clearTimeout(peerTimer);
     peerTimer = global.setTimeout(() => {
+      if (!active) return;
       try {
         const app = JSON.parse(global.localStorage.getItem(APP_KEY) || 'null');
         const learning = JSON.parse(global.localStorage.getItem(LEARNING_KEY) || 'null');
@@ -265,8 +283,18 @@
   global.addEventListener('storage', peerChanged);
   global.addEventListener('online', () => { if (!localOnly && state === 'offline') retry().catch(() => undefined); });
   const checkOnReturn = () => {
-    if (!localOnly && global.document.visibilityState !== 'hidden' && Date.now() - lastCheck >= 15000 && !conflict && !['loading', 'syncing', 'unauthorized'].includes(state)) retry().catch(() => undefined);
+    if (active && !localOnly && global.document.visibilityState !== 'hidden' && Date.now() - lastCheck >= 15000 && !conflict && !['loading', 'syncing', 'unauthorized'].includes(state)) retry().catch(() => undefined);
   };
+  global.addEventListener('pagehide', () => {
+    active = false; pageEpoch++;
+    global.clearTimeout(debounce); global.clearTimeout(peerTimer);
+    for (const controller of requests) controller.abort();
+  });
+  global.addEventListener('pageshow', event => {
+    if (!event.persisted || active) return;
+    active = true; pageEpoch++;
+    if (!localOnly) retry().catch(() => undefined);
+  });
   global.addEventListener('focus', checkOnReturn);
   global.document.addEventListener('visibilitychange', checkOnReturn);
   const ready = enqueue(async () => {

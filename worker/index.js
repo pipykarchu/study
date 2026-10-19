@@ -109,11 +109,14 @@ async function identify(request, env) {
   if (difference !== 0) throw new HttpError(403, 'owner_mismatch', '这里只允许所有者账号使用，请切换为你自己的账号。');
   return id;
 }
-function roleStorageKey(id, url) {
+function studyRole(url) {
   const values = url.searchParams.getAll('role');
   if (values.length > 1 || values.length === 1 && !['apple', 'sheep'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择貔貅或小羊。');
+  return values[0] || 'apple';
+}
+function roleStorageKey(id, roleId) {
   // Verified identity excludes control characters; this internal suffix cannot collide with a real user id.
-  return values[0] === 'sheep' ? id + '\u001frole:sheep' : id;
+  return roleId === 'sheep' ? id + '\u001frole:sheep' : id;
 }
 function sameOrigin(request, requireOrigin = false) {
   const origin = request.headers.get('Origin');
@@ -146,25 +149,27 @@ async function readBody(request) {
 async function readState(db, id) {
   return db.prepare('SELECT revision, snapshot, updated_at FROM study_states WHERE owner_id = ?').bind(id).first();
 }
-function publicState(row) {
-  return {revision: row?.revision || 0, state: row ? JSON.parse(row.snapshot) : null, updatedAt: row?.updated_at || null, identity: IDENTITY};
+function publicState(row, roleId) {
+  return {roleId, revision: row?.revision || 0, state: row ? JSON.parse(row.snapshot) : null, updatedAt: row?.updated_at || null, identity: IDENTITY};
 }
-async function stateApi(request, env, id) {
+async function stateApi(request, env, id, roleId) {
   sameOrigin(request, request.method === 'PUT');
   if (!env.DB?.prepare) throw new HttpError(503, 'storage_unavailable', '云端学习记录暂时不可用，当前浏览器的记录仍会保留。');
-  if (request.method === 'GET') return json(publicState(await readState(env.DB, id)));
+  if (request.method === 'GET') return json(publicState(await readState(env.DB, id), roleId));
   if (request.method !== 'PUT') return json({code: 'method_not_allowed', error: '此接口仅支持读取或保存学习记录。'}, 405, {Allow: 'GET, PUT'});
   const body = await readBody(request);
   boundedTree(body);
-  keys(body, ['baseRevision', 'snapshot'], ['baseRevision', 'snapshot']);
+  keys(body, ['roleId', 'baseRevision', 'snapshot'], ['baseRevision', 'snapshot']);
+  // Older pages omit roleId; current pages bind the body to their selected partition too.
+  if (own(body, 'roleId') && body.roleId !== roleId) throw new HttpError(400, 'role_mismatch', '当前角色与提交记录不一致，未修改云端记录。');
   if (!integer(body.baseRevision, 0, Number.MAX_SAFE_INTEGER - 1)) invalid();
   const snapshot = validateSnapshot(body.snapshot);
   const serialized = JSON.stringify(snapshot), now = new Date().toISOString();
   const row = body.baseRevision === 0
     ? await env.DB.prepare('INSERT INTO study_states (owner_id, revision, snapshot, updated_at) VALUES (?, 1, ?, ?) ON CONFLICT (owner_id) DO NOTHING RETURNING revision, snapshot, updated_at').bind(id, serialized, now).first()
     : await env.DB.prepare('UPDATE study_states SET revision = revision + 1, snapshot = ?, updated_at = ? WHERE owner_id = ? AND revision = ? RETURNING revision, snapshot, updated_at').bind(serialized, now, id, body.baseRevision).first();
-  if (!row) return json({...publicState(await readState(env.DB, id)), code: 'revision_conflict', error: '另一处已更新学习记录，请先选择保留哪份记录。'}, 409);
-  return json(publicState(row));
+  if (!row) return json({...publicState(await readState(env.DB, id), roleId), code: 'revision_conflict', error: '另一处已更新学习记录，请先选择保留哪份记录。'}, 409);
+  return json(publicState(row, roleId));
 }
 
 /*__STATIC_ASSETS__*/
@@ -174,7 +179,10 @@ export default {
     try {
       const id = await identify(request, env);
       const url = new URL(request.url);
-      if (url.pathname === '/api/study/state') return await stateApi(request, env, roleStorageKey(id, url));
+      if (url.pathname === '/api/study/state') {
+        const roleId = studyRole(url);
+        return await stateApi(request, env, roleStorageKey(id, roleId), roleId);
+      }
       if (url.pathname.startsWith('/api/')) return json({code: 'not_found', error: '没有这个学习接口。'}, 404);
       if (!['GET', 'HEAD'].includes(request.method)) return json({code: 'method_not_allowed', error: '此页面仅支持浏览。'}, 405, {Allow: 'GET, HEAD'});
       const asset = STATIC_ASSETS[url.pathname === '/' ? '/index.html' : url.pathname];

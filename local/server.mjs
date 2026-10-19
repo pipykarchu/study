@@ -4,7 +4,7 @@ import { createReadStream } from 'node:fs';
 import { realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CodexClient, StudyError } from './codex-client.mjs';
+import { CodexClient, StudyError, learningScope } from './codex-client.mjs';
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MAX_BODY = 64 * 1024;
@@ -91,11 +91,13 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
         if (pathname === '/api/codex/status' && req.method === 'GET') return replyJson(res, 200, await codex.status());
         if (pathname === '/api/codex/cancel' && req.method === 'POST') {
           const body = await readJson(req);
+          learningScope(body);
           if (typeof body.conversationId !== 'string' || body.conversationId.length > 100) throw new StudyError('对话标识有误。', 400, 'conversation');
-          return replyJson(res, 200, { cancelled: codex.cancel(body.conversationId) });
+          return replyJson(res, 200, { cancelled: codex.cancel(body.conversationId,body) });
         }
         if (pathname === '/api/codex/chat' && req.method === 'POST') {
           const body = await readJson(req);
+          learningScope(body);
           if (typeof body.message !== 'string' || !body.message.trim() || body.message.length > 16000) throw new StudyError('请输入问题，最多 16000 字。', 400, 'message');
           if (body.context !== undefined && (typeof body.context !== 'string' || body.context.length > 12000)) throw new StudyError('学习背景太长，请缩短后再试。', 400, 'context');
           if (body.conversationId !== undefined && (typeof body.conversationId !== 'string' || !/^[a-f0-9-]{36}$/.test(body.conversationId))) throw new StudyError('对话标识有误，请新建对话。', 400, 'conversation');
@@ -105,15 +107,17 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
             throw new StudyError('提问太频繁，请稍等一分钟再试。', 429, 'rate_limited');
           }
           await codex.authorize();
+          if (res.destroyed) return;
           if (codex.busy) throw new StudyError('学习教练正在回答，请稍等或停止当前回答。', 409, 'busy');
           res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'X-Accel-Buffering': 'no' });
           let conversationId = body.conversationId;
           const emit = (event) => {
             if (event.type === 'conversation') conversationId = event.conversationId;
+            if (res.destroyed && conversationId) codex.cancel(conversationId,body);
             if (!res.destroyed && !res.writableEnded) res.write(`${JSON.stringify(event)}\n`);
           };
-          res.on('close', () => { if (!res.writableEnded && conversationId) codex.cancel(conversationId); });
-          try { await codex.chat({ message: body.message.trim(), context: body.context || '', conversationId: body.conversationId }, emit); }
+          res.on('close', () => { if (!res.writableEnded && conversationId) codex.cancel(conversationId,body); });
+          try { await codex.chat({ message: body.message.trim(), context: body.context || '', conversationId: body.conversationId, roleId:body.roleId, profileId:body.profileId }, emit); }
           catch (error) { emit({ type: 'error', message: error instanceof StudyError ? error.message : '本机助手暂时无法回答，请稍后重试。' }); }
           if (!res.destroyed && !res.writableEnded) res.end();
           return;

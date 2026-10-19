@@ -2,15 +2,17 @@
 (() => {
   'use strict';
   const drafts = new Map();
+  let lifecycle = 0, hidden = false;
   const levels = ['认识概念', '解释原理', '能独立应用', '能够排错', '能够迁移创造'];
   const fields = ['goal', 'why', 'outcome', 'level', 'minutes'];
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const keyOf = data => `${data.roleId === 'sheep' ? 'sheep' : 'apple'}:${data.profileId || 'product'}`;
   const context = () => window.StudyApp && window.StudyApp.getContext ? window.StudyApp.getContext() : null;
+  const currentTarget = (key, epoch=lifecycle) => {const data=context();return !hidden&&epoch===lifecycle&&!window.StudyRole?.isSwitching?.()&&data&&keyOf(data)===key;};
   const findPanel = key => Array.from(document.querySelectorAll('[data-study-planner]')).find(el => el.dataset.plannerKey === key);
   function entry(data) {
     const key = keyOf(data);
-    if (!drafts.has(key)) drafts.set(key, {dirty:false, values:{}, prompt:'', status:'', error:false, manual:false, busy:false});
+    if (!drafts.has(key)) drafts.set(key, {dirty:false, values:{}, prompt:'', status:'', error:false, manual:false, busy:false, revision:0});
     return drafts.get(key);
   }
   function valuesFrom(data) {
@@ -24,6 +26,7 @@
       '先调用 study_get_context 读取本站当前角色、学习方向和已保存目标。',
       `本次只为角色 ${roleName}（roleId=${roleId}）、方向 ${data.profile || data.profileId}（profileId=${data.profileId}）生成。`,
       '如果当前 roleId 或 profileId 与上面不一致，请让我切换后再继续，不要写入其他角色或方向。',
+      '调用任何写入工具都必须带上本次 roleId、profileId；若要切换方向，先重新读取当前上下文，并按工具要求携带 expectedProfileId。',
       '',
       '以下是我刚保存的目标资料：',
       `想做到：${data.goal}`,
@@ -61,14 +64,17 @@
   }
   async function copyPrepared(key) {
     const item = drafts.get(key);
-    if (!item || !item.prompt) return;
+    if (!item || !item.prompt || !currentTarget(key)) return;
+    const epoch=lifecycle, prompt=item.prompt, revision=item.revision;
     try {
       if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') throw Error('clipboard unavailable');
-      await navigator.clipboard.writeText(item.prompt);
+      await navigator.clipboard.writeText(prompt);
+      if(!currentTarget(key,epoch)||item.revision!==revision)return;
       item.manual = false;
       item.status = '目标已保存，指令已复制。请粘贴到旁边的 GPT / Codex，生成后由站点工具写回。';
       item.error = false;
     } catch (_) {
+      if(!currentTarget(key,epoch)||item.revision!==revision)return;
       item.manual = true;
       item.status = '目标已保存。浏览器未允许自动复制，请手动复制下方指令，发给旁边的 GPT / Codex。';
       item.error = false;
@@ -90,6 +96,7 @@
     const root = form.closest('[data-study-planner]'), key = root.dataset.plannerKey, item = drafts.get(key);
     if (!item) return;
     item.values = Object.fromEntries(fields.map(name => [name, form.elements[name].value]));
+    item.revision++;
     item.dirty = true;
     item.prompt = '';
     item.status = '目标有修改，保存后再交给 GPT。';
@@ -104,7 +111,7 @@
     const root = form.closest('[data-study-planner]'), key = root.dataset.plannerKey, item = drafts.get(key);
     if (!item || item.busy) return;
     const data = context();
-    if (!data || keyOf(data) !== key || !window.StudyApp.updateGoal) {
+    if (!data || !currentTarget(key) || !window.StudyApp.updateGoal) {
       item.status = '当前角色或方向已变化，请重新打开目标面板后再保存。';
       item.error = true;
       refresh(key);
@@ -118,15 +125,18 @@
     item.prompt = '';
     item.status = '正在保存目标…';
     item.error = false;
+    const epoch=lifecycle, revision=item.revision;
     refresh(key);
     try {
       if (['goal','why','outcome'].some(name => !values[name] || values[name].length > 3000)) throw Error('请先填写目标、学习动机和验收作品，每项最多 3000 字。');
       if (!levels.includes(values.level)) throw Error('请选择有效的目标水平。');
       if (!Number.isInteger(values.minutes) || values.minutes < 15 || values.minutes > 180) throw Error('每次学习时间请填写 15 至 180 分钟的整数。');
+      if(!currentTarget(key,epoch))throw Error('当前角色或方向已变化，请切回原目标面板再保存。');
       const saved = await window.StudyApp.updateGoal(values);
       if (saved === false) throw Error('目标还没有保存成功，请重试。');
       const latest = context();
-      if (!latest || keyOf(latest) !== key) throw Error('目标保存后角色已切换，请切回原角色查看。');
+      if (!latest || !currentTarget(key,epoch)) throw Error('目标已保留在原角色和方向，请切回原目标面板查看。');
+      if(item.revision!==revision)throw Error('原目标已保存，新修改仍保留在输入框，请保存后再生成。');
       item.dirty = false;
       if (event.submitter && event.submitter.value === 'prepare') {
         item.prompt = buildPrompt({...latest, ...values});
@@ -145,5 +155,8 @@
     const button = event.target.closest && event.target.closest('[data-planner-copy]');
     if (button) copyPrepared(button.closest('[data-study-planner]').dataset.plannerKey);
   });
+  window.addEventListener('study-role-leaving',()=>{lifecycle++;});
+  window.addEventListener('pagehide',()=>{lifecycle++;hidden=true;});
+  window.addEventListener('pageshow',event=>{if(event.persisted)hidden=false;});
   window.StudyPlanner = Object.freeze({render});
 })();
