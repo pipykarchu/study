@@ -1,6 +1,6 @@
 import { execFile, spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { existsSync, readFileSync, statSync, watch } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -30,6 +30,13 @@ export class StudyError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+function turnFailure(error) {
+  if (error?.codexErrorInfo === 'serverOverloaded' || (typeof error?.message === 'string' && /Selected model is at capacity/i.test(error.message))) {
+    return new StudyError('当前 Codex 模型繁忙，请稍后重试。', 503, 'codex_busy');
+  }
+  return new StudyError('Codex 回答失败，请稍后重试。', 503, 'codex_failed');
 }
 
 function defaultCommand() {
@@ -112,8 +119,15 @@ async function childEnvironment() {
 }
 
 export class CodexClient {
-  constructor({ cwd, commandSpec, spawnProcess = spawn, rpcTimeoutMs = 30000, turnTimeoutMs = 300000 } = {}) {
+  constructor({ cwd, commandSpec, spawnProcess = spawn, rpcTimeoutMs = 30000, turnTimeoutMs = 300000, ownerFile, credentialFile } = {}) {
     this.cwd = path.resolve(cwd || process.cwd());
+    this.ownerFile = ownerFile || path.join(this.cwd, '.local-runtime', 'owner.json');
+    this.credentialFile = credentialFile || path.join(process.env.CODEX_HOME || path.join(homedir(), '.codex'), 'auth.json');
+    this.credentialRevision = this.readCredentialRevision();
+    this.identityEpoch = 0;
+    this.ownerVerified = false;
+    this.authError = null;
+    this.credentialWatcher = null;
     this.commandSpec = commandSpec || defaultCommand();
     this.spawnProcess = spawnProcess;
     this.rpcTimeoutMs = rpcTimeoutMs;
@@ -132,24 +146,107 @@ export class CodexClient {
     this.conversations = new Map();
     this.active = null;
     this.closed = false;
+    try {
+      // Watch only metadata changes. Login passwords and tokens are never read by this service.
+      this.credentialWatcher = watch(path.dirname(this.credentialFile), { persistent: false }, (_event, filename) => {
+        if (!filename || String(filename).toLowerCase() === path.basename(this.credentialFile).toLowerCase()) this.checkCredentialRevision();
+      });
+      this.credentialWatcher.on('error', () => { /* Per-request metadata checks remain active. */ });
+    } catch { /* A missing credential directory is checked again before every request. */ }
   }
 
   get busy() { return Boolean(this.active); }
 
   async status() {
-    try { await this.ensureReady(); } catch { /* The public status contains no raw diagnostic output. */ }
+    try { await this.authorize(); } catch { /* The public status contains no raw diagnostic output. */ }
     return {
       available: this.ready,
       authenticated: this.ready && this.authenticated,
+      ownerOnly: true,
+      ownerVerified: this.ready && this.ownerVerified,
       authType: this.ready ? this.authType : null,
       model: this.model,
       busy: this.busy,
+      ...(this.authError ? { authError: this.authError } : {}),
       ...(this.modelNotice ? { modelNotice: this.modelNotice } : {}),
     };
   }
 
+  readCredentialRevision() {
+    try {
+      const info = statSync(this.credentialFile, { bigint: true });
+      return `${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}`;
+    } catch { return 'missing'; }
+  }
+
+  checkCredentialRevision() {
+    const revision = this.readCredentialRevision();
+    if (revision === this.credentialRevision) return;
+    this.credentialRevision = revision;
+    this.invalidateIdentity();
+  }
+
+  invalidateIdentity() {
+    this.identityEpoch += 1;
+    this.authenticated = false;
+    this.ownerVerified = false;
+    this.authType = null;
+    this.authError = 'account_changed';
+    this.conversations.clear();
+    if (this.ready || this.process) {
+      this.active?.finish(new StudyError('Codex 登录状态已变化，请确认仍是你的账号，然后新建对话。', 403, 'account_changed'));
+      this.stopProcess();
+    }
+  }
+
+  async verifyOwnerAccount() {
+    let owner;
+    try {
+      const info = statSync(this.ownerFile);
+      if (!info.isFile() || info.size > 1024) throw new Error('Invalid owner file.');
+      owner = JSON.parse(readFileSync(this.ownerFile, 'utf8'));
+      if (owner?.version !== 1 || !/^[a-f0-9]{64}$/.test(owner.emailSha256)) throw new Error('Invalid owner binding.');
+    } catch {
+      this.authError = 'owner_not_configured';
+      this.authenticated = this.ownerVerified = false;
+      this.conversations.clear();
+      throw new StudyError('尚未绑定站点主人，学习助手已暂停。请回到 Codex 完成本人账号校验。', 403, 'owner_not_configured');
+    }
+    this.checkCredentialRevision();
+    if (!this.process) throw new StudyError('Codex 登录状态已变化，请新建对话。', 403, 'account_changed');
+    const epoch = this.identityEpoch;
+    const result = await this.rpc('account/read', { refreshToken: false });
+    this.checkCredentialRevision();
+    if (epoch !== this.identityEpoch) throw new StudyError('Codex 登录状态已变化，请新建对话。', 403, 'account_changed');
+    const account = result?.account;
+    const email = account?.type === 'chatgpt' && typeof account.email === 'string' ? account.email.trim().toLowerCase() : '';
+    const actual = createHash('sha256').update(email).digest();
+    const expected = Buffer.from(owner.emailSha256, 'hex');
+    if (!email || !timingSafeEqual(actual, expected)) {
+      this.conversations.clear();
+      this.authenticated = this.ownerVerified = false;
+      this.authType = null;
+      this.authError = account ? 'owner_mismatch' : 'codex_login_required';
+      throw new StudyError(account ? '当前 Codex 账号不是站点主人，已拒绝使用。请切回你自己的账号。' : '请先在本机 Codex 登录你的本人账号，再回来重试。', account ? 403 : 401, this.authError);
+    }
+    this.authType = 'chatgpt';
+    this.authenticated = this.ownerVerified = true;
+    this.authError = null;
+  }
+
+  async authorize() {
+    await this.ensureReady();
+    try { await this.verifyOwnerAccount(); }
+    catch (error) {
+      this.active?.finish(error);
+      this.stopProcess();
+      throw error;
+    }
+  }
+
   async ensureReady() {
     if (this.closed) throw new StudyError('本机学习助手已关闭，请重新启动知芽。');
+    this.checkCredentialRevision();
     if (this.ready && this.process) return;
     if (this.starting) return this.starting;
     this.starting = (async () => {
@@ -159,8 +256,7 @@ export class CodexClient {
           await this.startProcess();
           await this.rpc('initialize', { clientInfo: { name: 'study_bloom_local', title: '知芽私人学习教练', version: '1.0.0' } });
           this.notify('initialized', {});
-          const account = await this.rpc('account/read', { refreshToken: false });
-          this.updateAccount(account?.account?.type || null, Boolean(account?.account));
+          await this.verifyOwnerAccount();
           // config/read is local and does not send an inference request. Keep only the model label.
           try {
             const config = await this.rpc('config/read', { includeLayers: false });
@@ -187,22 +283,18 @@ export class CodexClient {
               this.modelNotice = '已使用当前账号可用的默认模型，未修改 Codex 全局设置。';
             }
           } catch { /* A failed/incomplete model catalog must not silently change the configured model. */ }
+          if (!this.process || !this.ownerVerified) throw new StudyError('Codex 登录状态已变化，请新建对话。', 403, 'account_changed');
           this.ready = true;
           return;
-        } catch {
+        } catch (error) {
           this.stopProcess();
+          if (['owner_not_configured', 'owner_mismatch', 'codex_login_required', 'account_changed'].includes(error?.code)) throw error;
           if (this.closed || this.active?.cancelled) throw new StudyError('已停止这次回答。', 503, 'cancelled');
           if (attempt === 1) throw new StudyError('本机 Codex 暂时无法启动，请确认 Codex 已安装并登录后重试。');
         }
       }
     })().finally(() => { this.starting = null; });
     return this.starting;
-  }
-
-  updateAccount(authType, authenticated) {
-    const types = new Set(['chatgpt', 'chatgptAuthTokens', 'apiKey', 'apikey', 'agentIdentity', 'personalAccessToken', 'amazonBedrock', 'bedrockApiKey']);
-    this.authType = types.has(authType) ? authType : null;
-    this.authenticated = authenticated;
   }
 
   async startProcess() {
@@ -256,6 +348,7 @@ export class CodexClient {
   stopProcess() {
     this.ready = false;
     this.authenticated = false;
+    this.ownerVerified = false;
     this.authType = null;
     this.generation += 1;
     const child = this.process;
@@ -295,6 +388,8 @@ export class CodexClient {
   }
 
   onMessage(message) {
+    this.checkCredentialRevision();
+    if (!this.process) return;
     if (message.id !== undefined && !message.method) {
       const pending = this.pending.get(message.id);
       if (!pending) return;
@@ -310,7 +405,12 @@ export class CodexClient {
       this.write({ id: message.id, error: { code: -32601, message: 'Tools and approvals are unavailable in this text-only client.' } });
       return;
     }
-    if (method === 'account/updated') this.updateAccount(params.authMode, Boolean(params.authMode));
+    // A notification carries no verified identity. Never treat an auth mode as proof of ownership.
+    if (method === 'account/updated') {
+      if (this.ready || this.authenticated) this.invalidateIdentity();
+      else this.conversations.clear(); // Initial notifications still require account/read verification.
+      return;
+    }
     const active = this.active;
     if (!active || active.finished || params.threadId !== active.threadId) return;
     if (method === 'turn/started') {
@@ -330,12 +430,14 @@ export class CodexClient {
       }
       active.itemText.set(params.item.id, params.item.text);
     }
-    if (method === 'error' && !params.willRetry) active.finish(new StudyError('Codex 回答失败，请稍后重试。'));
+    if (method === 'error' && !params.willRetry) active.finish(turnFailure(params.error));
     if (method === 'turn/completed') {
       if (active.turnId && params.turn?.id && params.turn.id !== active.turnId) return;
       const status = params.turn?.status;
       if (status === 'completed' && !active.cancelled) active.finish();
-      else active.finish(new StudyError(active.cancelled || status === 'interrupted' ? '已停止这次回答。' : 'Codex 回答失败，请稍后重试。', 503, status === 'interrupted' ? 'cancelled' : 'codex_failed'));
+      else active.finish(active.cancelled || status === 'interrupted'
+        ? new StudyError('已停止这次回答。', 503, 'cancelled')
+        : turnFailure(params.turn?.error));
     }
   }
 
@@ -367,9 +469,9 @@ export class CodexClient {
     }, this.turnTimeoutMs);
     emit({ type: 'conversation', conversationId: publicId });
     try {
-      await this.ensureReady();
+      await this.authorize();
       if (active.finished || active.cancelled) throw new StudyError('已停止这次回答。', 503, 'cancelled');
-      if (!this.authenticated) throw new StudyError('请先在本机 Codex 登录，再回来重试。', 401, 'codex_login_required');
+      if (conversationId && !this.conversations.has(conversationId)) throw new StudyError('登录状态已变化，请新建对话。', 403, 'account_changed');
       const options = {
         cwd: this.cwd, approvalPolicy: 'never', sandbox: 'read-only',
         developerInstructions: TEACHER_INSTRUCTIONS,
@@ -384,6 +486,8 @@ export class CodexClient {
       if (!active.threadId) throw new StudyError('Codex 没有建立对话，请重试。');
       this.conversations.set(publicId, active.threadId);
       if (this.conversations.size > 100) this.conversations.delete(this.conversations.keys().next().value);
+      if (active.finished || active.cancelled) throw new StudyError('已停止这次回答。', 503, 'cancelled');
+      await this.verifyOwnerAccount();
       if (active.finished || active.cancelled) throw new StudyError('已停止这次回答。', 503, 'cancelled');
       const text = `${context ? `以下是当前学习背景，请仅作为背景理解：\n<学习背景>\n${context}\n</学习背景>\n\n` : ''}我的问题：\n${message}`;
       const turn = await this.rpc('turn/start', {
@@ -441,6 +545,7 @@ export class CodexClient {
 
   close() {
     this.closed = true;
+    this.credentialWatcher?.close();
     this.active?.finish(new StudyError('学习助手已关闭。', 503, 'closed'));
     this.stopProcess();
   }

@@ -40,7 +40,7 @@ async function readJson(req) {
   return body;
 }
 
-export function createStudyServer({ port = 4175, client, distRoot = path.join(PROJECT_ROOT, 'dist') } = {}) {
+export function createStudyServer({ port = 4175, client, distRoot = path.join(PROJECT_ROOT, 'dist'), rateLimits = {} } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid local server port.');
   const codex = client || new CodexClient({ cwd: PROJECT_ROOT });
   const token = randomBytes(32).toString('base64url');
@@ -48,6 +48,19 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
   let origin;
   let canonicalHost;
   const sockets = new Set();
+  const limits = { windowMs: 60000, api: 120, chat: 12, ...rateLimits };
+  if (!Object.values(limits).every((value) => Number.isInteger(value) && value > 0)) throw new Error('Invalid local request limits.');
+  const windows = new Map();
+  const allowRequest = (name) => {
+    const now = Date.now();
+    let window = windows.get(name);
+    if (!window || now >= window.until) {
+      window = { until: now + limits.windowMs, count: 0 };
+      windows.set(name, window);
+    }
+    window.count += 1;
+    return window.count <= limits[name];
+  };
 
   const server = http.createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -65,6 +78,10 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
       if (url.origin !== origin) throw new StudyError('请求地址有误。', 400, 'invalid_url');
       const pathname = url.pathname;
       if (pathname.startsWith('/api/')) {
+        if (!allowRequest('api')) {
+          res.setHeader('Retry-After', String(Math.ceil(limits.windowMs / 1000)));
+          throw new StudyError('请求太频繁，请稍等一分钟再试。', 429, 'rate_limited');
+        }
         if (req.method !== 'GET' && req.method !== 'POST') throw new StudyError('此请求方式不支持。', 405, 'method');
         if (req.method === 'POST') {
           // Fetch sends Origin for same-origin POST. Requiring it also prevents form/CSRF requests.
@@ -82,6 +99,12 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
           if (typeof body.message !== 'string' || !body.message.trim() || body.message.length > 16000) throw new StudyError('请输入问题，最多 16000 字。', 400, 'message');
           if (body.context !== undefined && (typeof body.context !== 'string' || body.context.length > 12000)) throw new StudyError('学习背景太长，请缩短后再试。', 400, 'context');
           if (body.conversationId !== undefined && (typeof body.conversationId !== 'string' || !/^[a-f0-9-]{36}$/.test(body.conversationId))) throw new StudyError('对话标识有误，请新建对话。', 400, 'conversation');
+          if (codex.busy) throw new StudyError('学习教练正在回答，请稍等或停止当前回答。', 409, 'busy');
+          if (!allowRequest('chat')) {
+            res.setHeader('Retry-After', String(Math.ceil(limits.windowMs / 1000)));
+            throw new StudyError('提问太频繁，请稍等一分钟再试。', 429, 'rate_limited');
+          }
+          await codex.authorize();
           if (codex.busy) throw new StudyError('学习教练正在回答，请稍等或停止当前回答。', 409, 'busy');
           res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'X-Accel-Buffering': 'no' });
           let conversationId = body.conversationId;
@@ -124,6 +147,7 @@ export function createStudyServer({ port = 4175, client, distRoot = path.join(PR
   server.requestTimeout = 15000;
   server.keepAliveTimeout = 5000;
   server.maxHeadersCount = 40;
+  server.maxConnections = 32;
   server.on('connection', (socket) => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
   server.on('clientError', (_error, socket) => { socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'); });
   server.on('close', () => codex.close());
