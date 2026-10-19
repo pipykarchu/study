@@ -4,3 +4,5 @@ node_modules/
 *.tgz
 qa/
 .local-runtime/
+dist/server/
+dist/.openai/

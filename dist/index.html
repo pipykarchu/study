@@ -11,6 +11,8 @@
   <script defer src="./learning.js"></script>
   <script defer src="./coach.js"></script>
   <script defer src="./app.js"></script>
+  <script defer src="./sync.js"></script>
+  <script defer src="./tools.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -20,7 +22,7 @@
       <div class="nav-section-label">我的学习空间</div>
       <nav id="navigation"></nav>
       <div class="sidebar-garden"><span class="mini-flower" aria-hidden="true">🌱</span><strong>每天一点，慢慢开花</strong><p>不用一下子学会所有。<br>先把今天的一小步走好。</p><button class="button soft small" data-action="navigate" data-page="session">去浇一点知识</button></div>
-      <div class="sidebar-footer"><span class="connection-dot"></span> 浏览器本地保存 <button class="text-button" data-action="export-json" aria-label="备份学习数据">备份 ↗</button></div>
+      <div class="sidebar-footer"><div id="study-sync-status" role="status" aria-live="polite">正在连接私人学习记录…</div><div id="study-tools-status">正在检查 Codex 联动…</div><button class="text-button" data-action="export-json" aria-label="备份学习数据">备份 ↗</button></div>
     </aside>
     <div class="workspace">
       <header class="topbar"><div class="breadcrumb">我的学习空间 <span>/</span> <b id="current-page-label">学习花园</b></div><div class="topbar-actions"><span class="today-label" id="today-label"></span><a href="https://github.com/pipykarchu/study" target="_blank" rel="noopener noreferrer" class="icon-button" title="打开 study 仓库" aria-label="打开 study 仓库" id="github-link"></a><span class="avatar" aria-label="我的学习空间">芽</span></div></header>

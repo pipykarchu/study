@@ -256,6 +256,7 @@
     getReview,
     reset(profile) {data.profiles[profileId(profile)] = fresh(); save(profile); return get(profile);},
     exportData() {return clone(data);},
+    validateData(raw) {return validate(raw);},
     importData(raw) {
       if (typeof raw === 'string') {if (raw.length > 1000000) fail(); try {raw = JSON.parse(raw);} catch (_) {fail();}}
       const clean = validate(raw); data = clean; save(null); return true;

@@ -835,3 +835,7 @@ dialog.modal::backdrop { background: #44315355; backdrop-filter: blur(4px); }
   .coach-stage-list { grid-template-columns: 1fr; }
   .coach-notice { margin-left: 15px; margin-right: 15px; }
 }
+:where(#study-sync-status, #study-tools-status) { line-height: 1.7; font-size: 11px; overflow-wrap: anywhere; }
+#study-sync-status button { display: inline-block; margin: 5px 5px 0 0; padding: 4px 7px; border: 1px solid #e9d6ef; border-radius: 8px; color: #6c477c; background: #fff8ff; cursor: pointer; font: inherit; }
+#study-sync-status button:focus-visible { outline: 2px solid #9e6bb5; outline-offset: 2px; }
+#study-tools-status { color: #8b7697; margin-top: 5px; }
