@@ -33,13 +33,12 @@
     return `<section class="wiki-method" aria-label="十倍学习方法的七个步骤"><div class="wiki-method-label"><strong>十倍学习 · 七步路径</strong><span>先框架，再输入；有产出，才算留下。</span></div><ol>${all.map((s,i)=>`<li><button data-wiki-action="stage" data-stage="${esc(s.id)}" class="${learning.stage===s.id?'is-current ':''}${learning.completedStages.includes(s.id)?'is-done':''}" ${learning.stage===s.id?'aria-current="step"':''}><span>${learning.completedStages.includes(s.id)?'✓':i+1}</span>${stageNames[i]||esc(s.title)}</button></li>`).join('')}</ol><p>“10 倍”是方法来源的标题；进度来自学习产出和实际测验，不按对话数量累加。</p></section>`;
   }
   function graph(data) {
-    const selected=entry(data).nodeIndex, positions=[[17,22],[50,22],[83,22],[83,71],[50,71],[17,71]];
-    return `<section class="wiki-map-card" aria-label="${esc(data.roleName)}的知识图谱"><div class="wiki-map-heading"><div><span class="wiki-eyebrow">MY PERSONAL WIKI</span><h2>${esc(data.profile)} · 知识图谱</h2></div><span class="wiki-map-scale">6 个知识节点</span></div><div class="wiki-map-scene"><div class="wiki-map-horizon" aria-hidden="true"></div><svg class="wiki-map-lines" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="wiki-route" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bba3cf"/><stop offset="1" stop-color="#d5b8b7"/></linearGradient></defs><ellipse cx="500" cy="420" rx="442" ry="145" class="wiki-map-ground"/><ellipse cx="500" cy="420" rx="350" ry="108" class="wiki-map-orbit"/><ellipse cx="500" cy="420" rx="245" ry="73" class="wiki-map-orbit"/><path d="M170 137 C270 112 375 112 500 137 S710 162 830 137 C960 200 955 380 830 440 C710 465 630 465 500 440 S290 415 170 440" class="wiki-map-route"/></svg><div class="wiki-map-center" aria-hidden="true"><span class="wiki-crystal">✦</span><strong>${esc(data.roleName)}的 Wiki</strong><small>每一页，都连着一个小目标</small></div>${(data.nodes||[]).map((n,i)=>`<button class="wiki-node ${n.index===selected?'is-selected':''} ${n.completed?'is-recorded':''}" data-wiki-action="node" data-node="${n.index}" style="--node-x:${positions[i]?.[0]||50}%;--node-y:${positions[i]?.[1]||50}%;--node-order:${i}" aria-pressed="${n.index===selected}" aria-controls="wiki-panel" aria-label="${i+1}. ${esc(n.name)}，${n.completed?'已记录自测':'待学习'}"><span class="wiki-node-number">${String(i+1).padStart(2,'0')}</span><span class="wiki-node-book" aria-hidden="true"><span></span></span><strong>${esc(n.name)}</strong><span class="wiki-node-status">${n.completed?'✓ 已记录自测':n.note?'已有学习笔记':'打开这一页'}<span aria-hidden="true">↗</span></span></button>`).join('')}</div><div class="wiki-map-legend"><span><i></i>连线表示建议学习顺序</span><span>点任一节点，在右侧直接开始</span></div></section>`;
+    return global.StudyNetwork?.render?.(data,{selectedIndex:entry(data).nodeIndex}) || '<section class="network-unavailable">知识关系图正在准备，请刷新后再试。</section>';
   }
   function nodeWiki(data) {
     const n=node(data);if(!n)return '<p class="wiki-empty">先保存一个学习框架，就能开始写自己的 Wiki。</p>';
     const state=entry(data), note=state.notes.has(n.index)?state.notes.get(n.index):n.note||'';
-    return `<article class="wiki-node-page"><div class="wiki-page-heading"><span class="wiki-paper-tag">WIKI ${String(n.index+1).padStart(2,'0')}</span><span>${n.completed?'✓ 已记录自测':'从理解开始'}</span></div><h3>${esc(n.name)}</h3><p class="wiki-node-description">${esc(n.description)}</p><div class="wiki-practice-card"><span class="wiki-small-label">这次动手做</span><p>${esc(n.exercise)}</p></div><div class="wiki-acceptance"><span class="wiki-small-label">怎样算做到了</span><p>${esc(n.acceptance)}</p></div><div class="wiki-pane-actions"><button class="button primary small" data-wiki-action="chat">和 Codex 学这一页 ↗</button><button class="button secondary small" data-wiki-action="quiz">做一次主动回忆</button></div><form data-wiki-note-form><label class="field">我的理解与练习证据<textarea name="note" data-wiki-note rows="5" maxlength="20000" placeholder="合上资料，用自己的话解释；留下做法、结果或还没想明白的问题。">${esc(note)}</textarea></label><div class="wiki-note-actions"><button class="button secondary small" type="submit">保存本页笔记</button><button class="text-button" type="button" data-wiki-action="collect-note">沉淀到资料库 ↗</button></div></form><p class="wiki-small-print">笔记与资料会归入当前角色、当前学习方向。框架变化后，请核对旧笔记是否适用。</p></article>`;
+    return `<article class="wiki-node-page"><div class="wiki-page-heading"><span class="wiki-paper-tag">WIKI ${String(n.index+1).padStart(2,'0')}</span><span>${n.completed?'✓ 已记录自测':'从理解开始'}</span></div><h3>${esc(n.name)}</h3><p class="wiki-node-description">${esc(n.description)}</p><div class="wiki-practice-card"><span class="wiki-small-label">这次动手做</span><p>${esc(n.exercise)}</p></div><div class="wiki-acceptance"><span class="wiki-small-label">怎样算做到了</span><p>${esc(n.acceptance)}</p></div><div class="wiki-pane-actions"><button class="button primary small" data-wiki-action="chat">和 Codex 学这一页 ↗</button><button class="button secondary small" data-wiki-action="quiz">做一次主动回忆</button></div><form data-wiki-note-form><label class="field">我的理解与练习证据<textarea name="note" data-wiki-note rows="5" maxlength="20000" placeholder="合上资料，用自己的话解释；留下做法、结果或还没想明白的问题。">${esc(note)}</textarea></label><div class="wiki-relation-editor"><label class="field">关联到另一个知识点<select data-wiki-link-target>${(data.nodes||[]).filter(other=>other.index!==n.index).map(other=>`<option value="${other.index}">${esc(other.name)}</option>`).join('')}</select></label><button type="button" class="button secondary small" data-wiki-action="link-node">建立 Wiki 关联</button></div><p class="wiki-small-print">关联以 [[节点名称]] 保存在笔记里，保存后会连线；删除引用即可解除。</p><div class="wiki-note-actions"><button class="button secondary small" type="submit">保存本页笔记</button><button class="text-button" type="button" data-wiki-action="collect-note">沉淀到资料库 ↗</button></div></form><p class="wiki-small-print">笔记与资料会归入当前角色、当前学习方向。框架变化后，请核对旧笔记是否适用。</p></article>`;
   }
   function materialForm(data) {
     const state=entry(data), draft=state.material;
@@ -73,7 +72,11 @@
     const learning=stageState(data), checked=(data.nodes||[]).filter(n=>n.completed).length;
     return `<div class="study-wiki" id="study-wiki" data-wiki-scope="${esc(renderedKey)}"><header class="wiki-header"><div class="wiki-identity"><span class="wiki-avatar ${data.roleId==='apple'?'is-pixiu':''}" aria-hidden="true">${esc(data.roleAvatar)}</span><div><span class="wiki-eyebrow">A LITTLE WIKI, A GROWING WORLD</span><h1>${esc(data.roleName)}的知识世界</h1><p>从自己的地图出发，在一处学、练、留下成果。</p></div></div><div class="wiki-progress"><span><strong>${checked}</strong> / 6 节点自测记录</span><span><strong>${learning.quiz.bestScore===null||learning.quiz.bestScore===undefined?'—':learning.quiz.bestScore+'分'}</strong> 完整测验最高</span></div></header><div class="wiki-directions" role="group" aria-label="选择学习方向">${directions.map(([id,label])=>`<button data-action="profile" data-id="${id}" class="${data.profileId===id?'is-current':''}" aria-pressed="${data.profileId===id}">${label}</button>`).join('')}<span>各自的目标、笔记与资料，归入当前空间</span></div><section class="wiki-goal-bar"><span class="wiki-goal-marker" aria-hidden="true">◎</span><div><span class="wiki-small-label">这一次，我想做到</span><h2>${esc(data.goal||'写下一个具体的学习目标')}</h2><p>产出：${esc(data.outcome||'先定义一份能检查的学习成果')}<span> · 每次 ${esc(data.minutes||45)} 分钟</span></p></div><button class="text-button" data-wiki-action="goal">编辑目标 ↗</button></section><details class="wiki-goal-editor" data-wiki-goal-editor><summary>直接写下目标，让 Codex 生成框架</summary>${global.StudyPlanner?.render?.(data)||'<button class="button secondary small" data-action="edit-goal">编辑学习目标</button>'}</details><div class="wiki-workspace">${graph(data)}${pane(data)}</div><p class="wiki-inline-message ${state.error?'is-error':''}" data-wiki-message role="status" ${state.message?'':'hidden'}>${esc(state.message)}</p><details class="wiki-boundaries"><summary>学习边界 <span>先弄清哪些要学，哪些可以先放下</span></summary><div class="wiki-boundary-grid">${[['must','这次必学'],['optional','有余力再学'],['later','暂时不学']].map(([id,label])=>`<div><h3>${label}</h3><ul>${(data.boundaries?.[id]||[]).map(v=>`<li>${esc(v)}</li>`).join('')||'<li>还没有写下这份清单</li>'}</ul></div>`).join('')}</div><button class="text-button" data-action="edit-boundary">调整学习边界 ↗</button></details>${stages(data)}</div>`;
   }
-  function mount() { if(entry().pane==='chat')global.studyCoach?.mount?.(); }
+  function mount() {
+    const target=scope(context);
+    global.StudyNetwork?.mount?.(index=>{if(same(target)&&Number.isInteger(index)&&index>=0&&index<6)openPane('wiki',index);});
+    if(entry().pane==='chat')global.studyCoach?.mount?.();
+  }
   function openPane(mode='wiki',index) {
     const data=current();if(!data)return false;
     const state=entry(data);
@@ -155,6 +158,16 @@
       else if(['chat','quiz','review'].includes(action))openPane(action);
       else if(action==='goal'){const details=document.querySelector('[data-wiki-goal-editor]');details.open=true;details.querySelector('input')?.focus();details.scrollIntoView?.({behavior:'smooth',block:'nearest'});}
       else if(action==='stage'){global.StudyLearning?.setStage(context.profileId,button.dataset.stage);openPane(button.dataset.stage==='quiz'?'quiz':button.dataset.stage==='review'?'review':'chat');}
+      else if(action==='link-node'){
+        const form=button.closest('[data-wiki-note-form]'), chosen=Number(form?.querySelector('[data-wiki-link-target]')?.value), related=(context.nodes||[]).find(item=>item.index===chosen), currentNode=node();
+        if(!form||!related||related.index===currentNode.index)throw Error('请选择当前方向的另一个知识点。');
+        if(context.nodes.filter(item=>item.name===related.name).length!==1)throw Error('这个知识点名称重复，请先让框架中的节点使用不同名称，再建立引用。');
+        const reference='[['+related.name+']]', original=form.elements.note.value;
+        const note=original.includes(reference)?original:original+(original.trim()?'\n\n':'')+'关联知识：'+reference;
+        const hadDraft=state.notes.has(currentNode.index),previousDraft=state.notes.get(currentNode.index);state.notes.set(currentNode.index,note);
+        try{global.StudyApp.recordNote(currentNode.index,note);}catch(error){if(hadDraft)state.notes.set(currentNode.index,previousDraft);else state.notes.delete(currentNode.index);throw error;}
+        state.notes.delete(currentNode.index);announce('Wiki 关联已保存，图谱已连线。');
+      }
       else if(action==='collect-note'){
         const n=node(),text=(state.notes.has(n.index)?state.notes.get(n.index):n.note||'').trim();if(!text)throw Error('先写下自己的理解，再沉淀到资料库。');
         state.pane='materials';state.adding=true;state.editing=null;state.material={type:'note',title:n.name+' · 学习笔记',content:text.slice(0,10000),url:'',nodeIndex:n.index};refresh();if(text.length>10000)announce('资料正文最多 10000 字，已放入前 10000 字，请检查后再保存。');
@@ -223,9 +236,12 @@
       }else if(form.matches('[data-wiki-ima-search]'))void imaAction('ima-search');
     }catch(error){announce(error.message,true);}
   });
-  global.addEventListener('study-role-leaving',()=>{leaving=true;abortRequests();});
+  global.addEventListener('study-learning-change',event=>{
+    if(context&&same(scope(context))&&(!event.detail?.profile||event.detail.profile===context.profileId)&&document.querySelector('#study-wiki'))global.StudyNetwork?.refresh?.(current(),{selectedIndex:entry().nodeIndex});
+  });
+  global.addEventListener('study-role-leaving',()=>{leaving=true;abortRequests();global.StudyNetwork?.dispose?.();});
   global.addEventListener('study-workspace-reset',event=>{const roleId=event.detail?.roleId;if(!['apple','sheep'].includes(roleId))return;for(const key of states.keys())if(key.startsWith(roleId+':'))states.delete(key);if(context?.roleId===roleId)abortRequests();});
-  global.addEventListener('pagehide',()=>{leaving=true;abortRequests();});
-  global.addEventListener('pageshow',()=>{leaving=false;});
+  global.addEventListener('pagehide',()=>{leaving=true;abortRequests();global.StudyNetwork?.dispose?.();});
+  global.addEventListener('pageshow',()=>{leaving=false;if(context&&document.querySelector('#study-wiki'))mount();});
   global.StudyWiki=Object.freeze({render,mount,getFocus:()=>context?entry().nodeIndex:null,openPane,renderLibrary:data=>{entry(data).pane='materials';return render(data);}});
 })(window);

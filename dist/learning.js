@@ -195,6 +195,25 @@
     const active = activeView(profile, p.quiz.active);
     return clone({stage: p.stage, completedStages: p.completedStages, quiz: {attempts, bestScore: fullAttempts.length ? Math.max(...fullAttempts.map(a => a.score)) : null, lastScore: lastFull ? lastFull.score : null, answered: active ? active.answered : (last ? last.answered : 0), total: active ? active.total : (last ? last.total : 0), dueAt: last ? last.dueAt : null, active}, recentEvidence: p.recentEvidence});
   }
+  function getNodeMastery(profile, {since = 0} = {}) {
+    profileId(profile);
+    if (!finiteInt(since, 0, 8640000000000000)) throw new Error('掌握度时间范围无效');
+    const p = state(profile), latest = new Map(), rounds = [...p.quiz.attempts];
+    if (p.quiz.active && p.quiz.active.finishedAt === null) rounds.push(p.quiz.active);
+    for (const round of rounds) for (const answer of round.answers) {
+      if (answer.answeredAt < since) continue;
+      const previous = latest.get(answer.questionId);
+      // Import order can differ from event time; exact ties use the later stored round, with active last.
+      if (!previous || answer.answeredAt > previous.answeredAt || answer.answeredAt === previous.answeredAt && round.startedAt >= previous.startedAt) latest.set(answer.questionId, {...answer, startedAt: round.startedAt});
+    }
+    const nodes = Array.from({length: 6}, (_, nodeIndex) => ({nodeIndex, score: 0, answered: 0, total: 0, correct: 0, source: 'quiz'}));
+    for (const q of bank[profile]) {
+      const node = nodes[q.nodeIndex], answer = latest.get(q.id); node.total++;
+      if (answer) {node.answered++; if (answer.choiceIndex === q.correctIndex) node.correct++;}
+    }
+    for (const node of nodes) node.score = node.total ? Math.round(node.correct / node.total * 100) : 0;
+    return nodes;
+  }
   function evidence(p, stage, text, source) {
     p.recentEvidence.push({stage, text, at: Date.now(), source});
     p.recentEvidence = p.recentEvidence.slice(-LIMIT);
@@ -222,6 +241,7 @@
   global.StudyLearning = Object.freeze({
     stages,
     get,
+    getNodeMastery,
     getStorageStatus: () => clone(storage),
     setStage(profile, stage) {const p = state(profile); p.stage = stageId(stage); save(profile); return get(profile);},
     completeStage(profile, stage, text) {
