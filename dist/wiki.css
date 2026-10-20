@@ -3,7 +3,7 @@
 .wiki-header { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:23px; }
 .wiki-identity { display:flex; align-items:center; gap:15px; }
 .wiki-avatar { display:grid; place-items:center; width:68px; height:74px; flex:0 0 68px; font-size:49px; filter:drop-shadow(0 7px 5px #644a5620); }
-.wiki-avatar.is-pixiu { font-size:0; background:url('./pixiu.webp') center / contain no-repeat; }
+body[data-study-role] .wiki-avatar { height:auto; aspect-ratio:1; font-size:0; border-radius:22%; background:#f8eff9 var(--study-role-avatar) center / contain no-repeat; box-shadow:inset 0 0 0 1px #ffffff80; }
 .wiki-eyebrow { display:block; color:#9b859d; font-size:9px; font-weight:650; letter-spacing:1.6px; line-height:1.6; }
 .wiki-header h1 { margin:3px 0 4px; font-size:28px; font-weight:620; letter-spacing:.3px; }
 .wiki-header p { color:#8b7c8f; font-size:12px; }

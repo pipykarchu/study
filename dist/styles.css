@@ -857,7 +857,9 @@ dialog.modal::backdrop { background: #44315355; backdrop-filter: blur(4px); }
 .role-switch-note { min-height: 22px; text-align: center; }
 @media (max-width: 680px) { .study-role-button { padding: 6px 9px; } .study-role-dialog { padding: 24px 18px; } .role-picker-list { gap: 10px; } .role-avatar { width: 62px; height: 62px; font-size: 40px; } .topbar-actions .avatar { display: none; } }
 
-/* 貔貅与小羊使用相同的圆润小动物头像尺寸。 */
-.role-card[data-role="apple"] .role-avatar, body[data-study-role="apple"] .avatar, body[data-study-role="apple"] .role-current-avatar, [data-planner-key^="apple:"] .planner-owner > span:first-child, body[data-study-role="apple"] .coach-message.user .coach-message-avatar { background: transparent url('./pixiu.webp') center / contain no-repeat; color: transparent; border: 0; border-radius: 0; font-size: 0; box-shadow: none; }
-body[data-study-role="apple"] .role-current-avatar { display: inline-block; width: 28px; height: 28px; }
-[data-planner-key^="apple:"] .planner-owner > span:first-child { display: inline-block; width: 34px; height: 34px; flex-shrink: 0; }
+/* 两个角色使用同系列水彩头像，按内容角色取图。 */
+body[data-study-role="apple"], .role-card[data-role="apple"], [data-planner-key^="apple:"] { --study-role-avatar: url('./pixiu.png'); }
+body[data-study-role="sheep"], .role-card[data-role="sheep"], [data-planner-key^="sheep:"] { --study-role-avatar: url('./sheep.webp'); }
+.role-card .role-avatar, body[data-study-role] .avatar, body[data-study-role] .role-current-avatar, [data-planner-key] .planner-owner > span:first-child, body[data-study-role] .coach-message.user .coach-message-avatar { background: #f8eff9 var(--study-role-avatar) center / contain no-repeat; color: transparent; border: 0; border-radius: 22%; font-size: 0; box-shadow: inset 0 0 0 1px #ffffff80; }
+body[data-study-role] .role-current-avatar { display: inline-block; width: 28px; height: 28px; flex: 0 0 28px; }
+[data-planner-key] .planner-owner > span:first-child { display: inline-block; width: 34px; height: 34px; flex-shrink: 0; }
