@@ -868,32 +868,30 @@ body[data-study-role] .role-current-avatar { display: inline-block; width: 28px;
 #study-role-control .role-current-avatar { width: 34px; height: 34px; flex-basis: 34px; }
 #study-role-control .study-role-button:focus-visible, .cloud-sync-trigger:focus-visible { outline: 2px solid #a477bb; outline-offset: 3px; }
 .role-switch-banner { position: absolute; top: 50px; right: 0; width: 240px; padding: 10px 12px; background: #fff8fd; border: 1px solid #ecdce9; border-radius: 12px; box-shadow: 0 8px 26px #61427215; z-index: 30; font-size: 12px; }
-.cloud-sync-menu { display: flex; align-items: center; gap: 2px; position: relative; flex-shrink: 0; color: #775787; }
-.cloud-sync-trigger { display: flex; align-items: center; gap: 6px; padding: 9px 11px; border: 1px solid #eadff1; border-radius: 12px; background: #fcf8ff; cursor: pointer; list-style: none; font-size: 12px; white-space: nowrap; }
-.cloud-sync-trigger::-webkit-details-marker { display: none; }
-.cloud-sync-menu[open] > summary, .cloud-sync-trigger:hover { background: #f3ebfa; }
-.cloud-sync-label { font-size: 10px; color: #8b7996; }
-.cloud-sync-menu[data-sync-state="saved"] .cloud-sync-label { color: #56836b; }
-.cloud-sync-menu[data-sync-state="offline"] .cloud-sync-label, .cloud-sync-menu[data-sync-state="conflict"] .cloud-sync-label, .cloud-sync-menu[data-sync-state="unauthorized"] .cloud-sync-label { color: #aa7044; }
-.cloud-sync-menu #study-sync-status { position: absolute; top: calc(100% + 10px); right: 0; z-index: 40; width: min(300px, calc(100vw - 32px)); padding: 16px; border: 1px solid #eadff1; border-radius: 16px; background: #fffcff; box-shadow: 0 12px 36px #60437220; font-size: 12px; }
 .cloud-sync-menu #study-sync-status p { margin: 0 0 6px; color: #664b78; }
 .cloud-sync-menu #study-sync-status small { display: block; margin: 6px 0; }
 @media (max-width: 680px) {
   .topbar .breadcrumb { min-width: 0; flex-wrap: wrap; gap: 4px; }
   .topbar-actions { flex-shrink: 0; gap: 7px; }
   .topbar-actions #github-link { display: none; }
-  .cloud-sync-trigger { padding: 8px; gap: 4px; }
-  .cloud-sync-menu #study-sync-status { position: fixed; top: 72px; right: 16px; max-height: calc(100dvh - 90px); overflow: auto; }
 }
 [data-planner-key] .planner-owner > span:first-child { display: inline-block; width: 34px; height: 34px; flex-shrink: 0; }
 
-/* 云按钮直接同步；详情为独立的次要入口。 */
-.cloud-sync-trigger { font-family: inherit; color: inherit; min-height: 40px; }
-.cloud-sync-trigger:disabled { cursor: wait; opacity: .7; }
-.cloud-sync-details > summary { display: grid; place-items: center; width: 28px; min-height: 40px; border-radius: 9px; cursor: pointer; list-style: none; font-size: 20px; }
-.cloud-sync-details > summary::-webkit-details-marker { display: none; }
-.cloud-sync-details > summary:hover, .cloud-sync-details[open] > summary { background: #f3ebfa; }
-.cloud-sync-details > summary:focus-visible { outline: 2px solid #a477bb; outline-offset: 2px; }
+
+/* 单云入口：时间在上方，只有冲突需要展开选择。 */
+.cloud-sync-menu { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; color:#775787; }
+.cloud-sync-time { font-size:10px; line-height:1.35; color:#8b7996; white-space:nowrap; }
+.cloud-sync-trigger { display:grid; place-items:center; width:40px; height:36px; padding:0; border:0; border-radius:12px; color:#916ab0; background:transparent; cursor:pointer; }
+.cloud-sync-trigger:hover { background:#f1e9f8; color:#714895; }
+.cloud-sync-trigger:disabled { cursor:wait; opacity:.6; }
+.cloud-sync-trigger[aria-busy="true"] svg { animation:cloud-breathe 1s ease-in-out infinite alternate; }
+.cloud-sync-menu[data-sync-state="offline"] .cloud-sync-trigger,.cloud-sync-menu[data-sync-state="conflict"] .cloud-sync-trigger { color:#b47b42; }
+.cloud-sync-details[hidden] { display:none; }
+.cloud-sync-details { position:absolute; top:calc(100% + 8px); right:0; z-index:40; width:min(300px,calc(100vw - 32px)); padding:16px; border:1px solid #eadff1; border-radius:16px; background:#fffcff; box-shadow:0 12px 36px #60437220; font-size:12px; }
+.sync-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@keyframes cloud-breathe { to { opacity:.4; transform:translateY(-2px); } }
+@media(prefers-reduced-motion:reduce) { .cloud-sync-trigger[aria-busy="true"] svg { animation:none; } }
+@media(max-width:600px) { .cloud-sync-time { font-size:9px; } .cloud-sync-details { position:fixed; top:74px; right:16px; } }
 
 
 .role-card[data-role="bear"] { background: #f0f6ff; }

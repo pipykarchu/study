@@ -220,6 +220,20 @@ window.StudyApp=Object.freeze({
   validateData(raw){const clean=validateState(raw);clean.timer.deadline=null;return clean;},
   importData(raw){if(raw?.roleId!==undefined&&raw.roleId!==activeScope().roleId)throw Error('不能导入另一个角色的学习记录');const clean=this.validateData(raw);state=clean;save();render();return true;},
   getContext(){const g=goal(),frame=state.frameworks[state.profile];return {roleId:window.StudyRole?.id||'apple',roleName:window.StudyRole?.name||'小貅',roleAvatar:window.StudyRole?.avatar||'🐾',profileId:state.profile,level:g.level||'能独立应用',profile:profile().name,goal:g.goal,why:g.why,outcome:g.outcome,minutes:state.minutes,boundaries:JSON.parse(JSON.stringify(scope())),frameworkUpdatedAt:frame?.updatedAt||0,masterySince:frame?.updatedAt||0,frameworkCustomized:Boolean(frame),wikiLinks:frame?[]:(starterWikiLinks[state.profile]||[]).map(([from,to,label])=>({from,to,label,source:'curriculum'})),nodes:profile().nodes.map((n,i)=>({index:i,name:n[0],description:n[1],exercise:n[2],acceptance:n[3],completed:Boolean(state.completed[nodeKey(i)]),note:state.notes[nodeKey(i)]||''}))};},
+  getOverview(){
+    const plans=Object.entries(profiles).filter(([id])=>id===state.profile||state.goals[id]||state.frameworks[id]||state.materials.some(m=>m.profileId===id)||Object.entries(state.notes).some(([k,v])=>v&&(k.startsWith(id+'-')||k.startsWith('session-'+id+'-')))).map(([id,p])=>({id,title:p.name})).map(p=>{
+      const frame=state.frameworks[p.id], base=profiles[p.id], progress=window.StudyLearning.get(p.id), since=frame?.updatedAt||0;
+      const hasFramework=Boolean(frame)||(!p.id.startsWith('plan-')&&p.id!=='custom');
+      const stages=new Set(progress.recentEvidence.filter(e=>e.at>=since&&progress.completedStages.includes(e.stage)).map(e=>e.stage));
+      if(!p.id.startsWith('plan-')&&progress.quiz.attempts.some(a=>a.fullCoverage&&a.passed&&a.finishedAt>=since))stages.add('quiz');
+      const nodes=hasFramework?(frame?.nodes||base.nodes).length:0;
+      const notes=Object.entries(state.notes).filter(([k,v])=>v.trim()&&(k.startsWith(p.id+'-')||k.startsWith('session-'+p.id+'-'))).length;
+      return {id:p.id,title:p.title,goal:state.goals[p.id]?.goal||(hasFramework?base.goal:'写下目标，生成你的知识框架'),selected:p.id===state.profile,hasFramework,nodes,notes,materials:state.materials.filter(m=>m.profileId===p.id).length,checks:Array.from({length:nodes},(_,i)=>state.completed[p.id+'-'+i]).filter(Boolean).length,steps:stages.size};
+    });
+    const totals={plans:plans.length,nodes:0,notes:0,materials:0,checks:0,steps:0};
+    for(const p of plans)for(const key of ['nodes','notes','materials','checks','steps'])totals[key]+=p[key];
+    return {roleId:activeScope().roleId,plans,totals};
+  },
   selectProfile(id){if(!Object.hasOwn(profiles,id))throw Error('请选择有效学习方向');state.profile=id;save();render();return this.getContext();},
   updateGoal(input){if(!input||typeof input!=='object'||Object.keys(input).some(k=>!['goal','why','outcome','minutes','level'].includes(k)))throw Error('目标字段无效');const next={...(state.goals[state.profile]||{})};if(Object.hasOwn(input,'level')){if(!['认识概念','解释原理','能独立应用','能够排错','能够迁移创造'].includes(input.level))throw Error('请选择有效目标水平');next.level=input.level;}for(const k of ['goal','why','outcome'])if(Object.hasOwn(input,k)){if(typeof input[k]!=='string'||!input[k].trim()||input[k].length>3000)throw Error('请填写1至3000字的目标说明');next[k]=input[k].trim();}if(Object.hasOwn(input,'minutes')&&(!Number.isInteger(input.minutes)||input.minutes<15||input.minutes>180))throw Error('学习时间应为15至180分钟');state.goals[state.profile]=next;if(Object.hasOwn(input,'minutes'))state.minutes=input.minutes;save();render();return this.getContext();},
   updateBoundaries(input){if(!input||Object.keys(input).sort().join(',')!=='later,must,optional')throw Error('请提供必学、选学和暂不学三份清单');const next={};for(const k of ['must','optional','later']){if(!Array.isArray(input[k])||input[k].length>15||input[k].some(s=>typeof s!=='string'||!s.trim()||s.length>300))throw Error('每份边界最多15条，每条1至300字');next[k]=input[k].map(s=>s.trim());}state.boundaries[state.profile]=next;save();render();return this.getContext();},

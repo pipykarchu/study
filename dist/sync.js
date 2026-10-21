@@ -13,7 +13,7 @@
   const clone = value => JSON.parse(JSON.stringify(value));
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const validRevision = value => Number.isSafeInteger(value) && value >= 0;
-  let meta = {version: 1, roleId: ROLE_ID, revision: null, dirty: false, baseline: null, backup: null};
+  let meta = {version: 1, roleId: ROLE_ID, revision: null, dirty: false, baseline: null, backup: null, lastSyncedAt: null};
   let state = localOnly ? 'ready' : 'loading', verified = false, updatedAt = null;
   let error = '', conflict = null, generation = 0, suppress = 0, storageWarning = false;
   let debounce, peerTimer, lastCheck = 0, operation = Promise.resolve();
@@ -48,7 +48,7 @@
       if (raw.revision !== null && !baseline) return;
       let backup = null;
       if (raw.backup && Number.isFinite(raw.backup.savedAt) && typeof raw.backup.reason === 'string') backup = {state: validate(raw.backup.state), savedAt: raw.backup.savedAt, reason: raw.backup.reason.slice(0, 100)};
-      meta = {version: 1, roleId: ROLE_ID, revision: raw.revision, dirty: raw.dirty, baseline, backup};
+      meta = {version: 1, roleId: ROLE_ID, revision: raw.revision, dirty: raw.dirty, baseline, backup, lastSyncedAt: Number.isSafeInteger(raw.lastSyncedAt) && raw.lastSyncedAt > 0 && raw.lastSyncedAt <= Date.now() ? raw.lastSyncedAt : null};
     } catch (_) { storageWarning = true; }
   }
   function persist() {
@@ -56,7 +56,7 @@
     catch (_) { storageWarning = true; }
   }
   function status() {
-    return {mode: localOnly ? 'local' : 'cloud', roleId: ROLE_ID, state, verified, revision: meta.revision, dirty: meta.dirty, cloudSaved: active && !localOnly && verified && state === 'ready' && !meta.dirty && !conflict, updatedAt, error, conflict: Boolean(conflict), backupAvailable: Boolean(meta.backup), storageWarning};
+    return {mode: localOnly ? 'local' : 'cloud', roleId: ROLE_ID, state, verified, revision: meta.revision, dirty: meta.dirty, cloudSaved: active && !localOnly && verified && state === 'ready' && !meta.dirty && !conflict, updatedAt, lastSyncedAt: meta.lastSyncedAt, error, conflict: Boolean(conflict), backupAvailable: Boolean(meta.backup), storageWarning};
   }
   function notify() {
     mount();
@@ -78,7 +78,7 @@
     const current = data || apply(remote.state);
     meta.revision = remote.revision;
     meta.baseline = clone(current);
-    meta.dirty = false;
+    meta.dirty = false; meta.lastSyncedAt = Date.now();
     updatedAt = remote.updatedAt;
     conflict = null; error = ''; state = 'ready'; persist(); notify();
   }
@@ -135,6 +135,7 @@
       meta.revision = remote.revision;
       meta.baseline = meaningful(current) ? null : clone(current);
       meta.dirty = meaningful(current);
+      if (!meta.dirty) meta.lastSyncedAt = Date.now();
       conflict = null; error = ''; state = 'ready'; persist(); notify(); return;
     }
     if (same(current, remote.state)) { adopt(remote, current); return; }
@@ -172,6 +173,7 @@
     }
     meta.revision = remote.revision; meta.baseline = clone(submitted); updatedAt = remote.updatedAt;
     meta.dirty = sentGeneration !== generation || !same(snapshot(), submitted);
+    if (!meta.dirty) meta.lastSyncedAt = Date.now();
     state = 'ready'; error = ''; persist(); notify();
     return status();
   }
@@ -244,11 +246,11 @@
   async function syncNow() {
     if (manualSync || !active || ['loading', 'syncing'].includes(state)) return;
     const details = global.document.getElementById('study-sync-details');
-    if (localOnly || conflict) { if (details) details.open = true; return; }
-    if (details) details.open = false;
+    if (localOnly || conflict) { if (details) details.hidden = false; return; }
+    if (details) details.hidden = true;
     manualSync = true; mount();
     try { await retry(); }
-    catch (e) { if (active && e.kind !== 'inactive') { error = e.message; if (details) details.open = true; } }
+    catch (e) { if (active && e.kind !== 'inactive') { error = e.message; if (details) details.hidden = !conflict; } }
     finally { manualSync = false; mount(); }
   }
   function mount() {
@@ -259,9 +261,15 @@
       const menu = global.document.getElementById('study-sync-menu');
       if (menu) menu.dataset.syncState = localOnly ? 'local' : current.cloudSaved ? 'saved' : state;
     }
+    const time = global.document.getElementById('study-sync-time');
+    const previous = meta.lastSyncedAt ? '上次同步 ' + new Date(meta.lastSyncedAt).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}) : '尚未同步';
+    if (time) time.textContent = localOnly ? '仅保存在本机' : (state === 'offline' ? '同步失败 · ' : state === 'unauthorized' ? '请登录 · ' : '') + previous;
+    const details = global.document.getElementById('study-sync-details');
+    if (details && !localOnly) details.hidden = !conflict;
     const trigger = global.document.getElementById('study-sync-now');
     if (trigger) {
       trigger.onclick = syncNow;
+      trigger.title = (summary?.textContent || '') + ' · ' + previous + (error ? '\n' + error : '');
       trigger.disabled = !active || manualSync || ['loading', 'syncing'].includes(state);
       trigger.setAttribute('aria-busy', String(manualSync || ['loading', 'syncing'].includes(state)));
       trigger.setAttribute('aria-label', conflict ? '处理同步冲突' : localOnly ? '查看本机保存状态' : state === 'offline' || state === 'unauthorized' ? '重试同步学习记录' : '立即同步学习记录');
@@ -276,8 +284,6 @@
     if (storageWarning) { const detail = global.document.createElement('small'); detail.textContent = '浏览器无法保留离线副本，请保持页面打开，并在离开前确认云端已同步或导出备份。'; root.appendChild(detail); }
     const button = (label, action) => { const el = global.document.createElement('button'); el.type = 'button'; el.textContent = label; el.addEventListener('click', () => { el.disabled = true; Promise.resolve().then(action).catch(e => { if (e.kind !== 'conflict') { error = e.message; notify(); } }).finally(() => { el.disabled = false; }); }); root.appendChild(el); };
     if (conflict) { button('使用云端', () => resolveConflict('cloud')); button('保留本机并上传', () => resolveConflict('local')); }
-    else if (state === 'offline' || state === 'unauthorized') button('重试同步', retry);
-    else if (state === 'ready') button('立即同步', retry);
     if (meta.backup) button('下载保留副本', downloadBackup);
   }
   function peerChanged(event) {
@@ -308,12 +314,12 @@
   global.addEventListener('storage', peerChanged);
   global.document.addEventListener('click', event => {
     if (!global.document.getElementById('study-sync-menu')?.contains(event.target)) {
-      const details = global.document.getElementById('study-sync-details'); if (details) details.open = false;
+      const details = global.document.getElementById('study-sync-details'); if (details) details.hidden = true;
     }
   });
   global.document.addEventListener('keydown', event => {
     const details = global.document.getElementById('study-sync-details');
-    if (event.key === 'Escape' && details?.open) { details.open = false; global.document.getElementById('study-sync-now')?.focus(); }
+    if (event.key === 'Escape' && details && !details.hidden) { details.hidden = true; global.document.getElementById('study-sync-now')?.focus(); }
   });
   global.addEventListener('online', () => { if (!localOnly && state === 'offline') retry().catch(() => undefined); });
   const checkOnReturn = () => {

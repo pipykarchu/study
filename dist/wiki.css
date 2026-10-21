@@ -187,3 +187,29 @@ body[data-study-role] .wiki-avatar { height:auto; aspect-ratio:1; font-size:0; b
 @media(max-width:1000px){ .wiki-map-scene { min-height:530px; } .wiki-node { min-height:166px; } .wiki-node-status { font-size:12px; } .wiki-node strong { font-size:13px; } }
 @media(max-width:600px){ .wiki-map-scene { min-height:540px; } .wiki-node { min-height:176px; padding:20px 6px 10px; } .wiki-node strong { font-size:12px; min-height:54px; } .wiki-node-status { font-size:11px; display:block; } .wiki-node-status>span { display:none; } .wiki-map-center small { display:none; } .wiki-map-center strong { font-size:12px; } .wiki-map-heading h2 { font-size:13px; } .wiki-map-legend { font-size:12px; } .wiki-goal-bar>.text-button { font-size:12px; } .wiki-directions button { font-size:12px; padding:8px 10px; } .wiki-method ol { grid-template-columns:repeat(2,minmax(0,1fr)); } .wiki-boundaries>summary>span { font-size:12px; } .wiki-library-heading h3 { font-size:14px; } .wiki-header p { font-size:12px; } .wiki-workbench-top { align-items:start; } }
 .wiki-relation-editor { display:flex; align-items:flex-end; gap:10px; margin:14px 0 6px; } .wiki-relation-editor .field { flex:1; margin:0; min-width:0; } .wiki-relation-editor select { width:100%; } @media(max-width:600px){ .wiki-relation-editor { flex-direction:column; align-items:stretch; } }
+.panorama { margin-bottom:20px; padding:22px; }
+.panorama-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.panorama-heading h2 { margin:4px 0 6px; font-size:22px; color:#57416c; }
+.panorama-heading p,.panorama-caption { color:#8b7996; font-size:12px; margin:0; line-height:1.7; }
+.panorama-metrics { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; }
+.panorama-metrics>div { min-width:0; display:flex; flex-direction:column; gap:5px; padding:16px 12px; border:1px solid #ecdef4; border-radius:14px; background:linear-gradient(145deg,#fcf7ff,#fff); }
+.panorama-metrics strong { color:#8456a4; font-size:26px; line-height:1.2; }
+.panorama-metrics span { font-size:13px; color:#62506f; }
+.panorama-metrics small { font-size:11px; color:#9789a0; }
+.panorama-plans { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0 12px; }
+.panorama-plan { min-width:0; padding:16px; border:1px solid #eadff1; border-radius:14px; background:#fff; }
+.panorama-plan.is-current { border-color:#c4a6dc; background:#fcf8ff; }
+.panorama-plan-title,.panorama-plan-progress,.panorama-plan-bottom { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.panorama-plan h3 { font-size:15px; line-height:1.5; margin:0; overflow-wrap:anywhere; }
+.panorama-plan-title>span { flex-shrink:0; font-size:10px; color:#9065ae; background:#f1e8f7; border-radius:12px; padding:4px 7px; }
+.panorama-goal { font-size:12px; color:#8b7996; line-height:1.7; margin:9px 0 14px; overflow-wrap:anywhere; }
+.panorama-plan-progress { font-size:11px; color:#897398; }
+.panorama-plan progress { display:block; appearance:none; width:100%; height:5px; border:0; border-radius:6px; overflow:hidden; background:#f0e8f5; margin:7px 0 12px; }
+.panorama-plan progress::-webkit-progress-bar { background:#f0e8f5; }
+.panorama-plan progress::-webkit-progress-value { background:#b793cf; border-radius:6px; }
+.panorama-plan progress::-moz-progress-bar { background:#b793cf; }
+.panorama-plan-bottom small { font-size:11px; color:#95859f; }
+.panorama-plan-bottom .text-button { flex-shrink:0; padding:5px 0; }
+.panorama-empty { grid-column:1/-1; padding:10px 0; color:#8b7996; }
+@media(max-width:1050px) { .panorama-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(max-width:600px) { .panorama { padding:15px; } .panorama-heading { align-items:flex-start; } .panorama-heading .button { flex-shrink:0; } .panorama-heading p { font-size:11px; } .panorama-plans { grid-template-columns:1fr; } .panorama-metrics { gap:7px; } .panorama-metrics>div { padding:12px 8px; } .panorama-metrics small { font-size:10px; } }
