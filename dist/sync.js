@@ -17,7 +17,7 @@
   let state = localOnly ? 'ready' : 'loading', verified = false, updatedAt = null;
   let error = '', conflict = null, generation = 0, suppress = 0, storageWarning = false;
   let debounce, peerTimer, lastCheck = 0, operation = Promise.resolve();
-  let active = true, pageEpoch = 0;
+  let active = true, pageEpoch = 0, manualSync = false;
   const requests = new Set();
 
   function assertActive(epoch = pageEpoch) {
@@ -241,13 +241,30 @@
     const url = global.URL.createObjectURL(new global.Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
     const link = global.document.createElement('a'); link.href = url; link.download = '貅知识-同步冲突保留副本.json'; link.click(); global.URL.revokeObjectURL(url);
   }
+  async function syncNow() {
+    if (manualSync || !active || ['loading', 'syncing'].includes(state)) return;
+    const details = global.document.getElementById('study-sync-details');
+    if (localOnly || conflict) { if (details) details.open = true; return; }
+    if (details) details.open = false;
+    manualSync = true; mount();
+    try { await retry(); }
+    catch (e) { if (active && e.kind !== 'inactive') { error = e.message; if (details) details.open = true; } }
+    finally { manualSync = false; mount(); }
+  }
   function mount() {
     const summary = global.document.getElementById('study-sync-label');
     const current = status();
     if (summary) {
-      summary.textContent = localOnly ? '仅本机' : current.cloudSaved ? '已同步' : ({loading: '连接中', syncing: '同步中', conflict: '有冲突', unauthorized: '请登录', offline: '离线', ready: meta.dirty ? '待同步' : '待确认'})[state];
+      summary.textContent = manualSync ? '同步中' : localOnly ? '仅本机' : current.cloudSaved ? '已同步' : ({loading: '连接中', syncing: '同步中', conflict: '有冲突', unauthorized: '请登录', offline: '重试同步', ready: meta.dirty ? '待同步' : '待确认'})[state];
       const menu = global.document.getElementById('study-sync-menu');
       if (menu) menu.dataset.syncState = localOnly ? 'local' : current.cloudSaved ? 'saved' : state;
+    }
+    const trigger = global.document.getElementById('study-sync-now');
+    if (trigger) {
+      trigger.onclick = syncNow;
+      trigger.disabled = !active || manualSync || ['loading', 'syncing'].includes(state);
+      trigger.setAttribute('aria-busy', String(manualSync || ['loading', 'syncing'].includes(state)));
+      trigger.setAttribute('aria-label', conflict ? '处理同步冲突' : localOnly ? '查看本机保存状态' : state === 'offline' || state === 'unauthorized' ? '重试同步学习记录' : '立即同步学习记录');
     }
     const root = global.document.getElementById('study-sync-status');
     if (!root) return;
@@ -289,6 +306,15 @@
   global.addEventListener('study-app-change', changed);
   global.addEventListener('study-learning-change', changed);
   global.addEventListener('storage', peerChanged);
+  global.document.addEventListener('click', event => {
+    if (!global.document.getElementById('study-sync-menu')?.contains(event.target)) {
+      const details = global.document.getElementById('study-sync-details'); if (details) details.open = false;
+    }
+  });
+  global.document.addEventListener('keydown', event => {
+    const details = global.document.getElementById('study-sync-details');
+    if (event.key === 'Escape' && details?.open) { details.open = false; global.document.getElementById('study-sync-now')?.focus(); }
+  });
   global.addEventListener('online', () => { if (!localOnly && state === 'offline') retry().catch(() => undefined); });
   const checkOnReturn = () => {
     if (active && !localOnly && global.document.visibilityState !== 'hidden' && Date.now() - lastCheck >= 15000 && !conflict && !['loading', 'syncing', 'unauthorized'].includes(state)) retry().catch(() => undefined);

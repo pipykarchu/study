@@ -866,12 +866,12 @@ body[data-study-role] .role-current-avatar { display: inline-block; width: 28px;
 #study-role-control { position: relative; flex-shrink: 0; }
 #study-role-control .study-role-button { width: 42px; height: 42px; padding: 3px; border-radius: 13px; background: #fff; justify-content: center; }
 #study-role-control .role-current-avatar { width: 34px; height: 34px; flex-basis: 34px; }
-#study-role-control .study-role-button:focus-visible, .cloud-sync-menu > summary:focus-visible { outline: 2px solid #a477bb; outline-offset: 3px; }
+#study-role-control .study-role-button:focus-visible, .cloud-sync-trigger:focus-visible { outline: 2px solid #a477bb; outline-offset: 3px; }
 .role-switch-banner { position: absolute; top: 50px; right: 0; width: 240px; padding: 10px 12px; background: #fff8fd; border: 1px solid #ecdce9; border-radius: 12px; box-shadow: 0 8px 26px #61427215; z-index: 30; font-size: 12px; }
-.cloud-sync-menu { position: relative; flex-shrink: 0; color: #775787; }
-.cloud-sync-menu > summary { display: flex; align-items: center; gap: 6px; padding: 9px 11px; border: 1px solid #eadff1; border-radius: 12px; background: #fcf8ff; cursor: pointer; list-style: none; font-size: 12px; white-space: nowrap; }
-.cloud-sync-menu > summary::-webkit-details-marker { display: none; }
-.cloud-sync-menu[open] > summary, .cloud-sync-menu > summary:hover { background: #f3ebfa; }
+.cloud-sync-menu { display: flex; align-items: center; gap: 2px; position: relative; flex-shrink: 0; color: #775787; }
+.cloud-sync-trigger { display: flex; align-items: center; gap: 6px; padding: 9px 11px; border: 1px solid #eadff1; border-radius: 12px; background: #fcf8ff; cursor: pointer; list-style: none; font-size: 12px; white-space: nowrap; }
+.cloud-sync-trigger::-webkit-details-marker { display: none; }
+.cloud-sync-menu[open] > summary, .cloud-sync-trigger:hover { background: #f3ebfa; }
 .cloud-sync-label { font-size: 10px; color: #8b7996; }
 .cloud-sync-menu[data-sync-state="saved"] .cloud-sync-label { color: #56836b; }
 .cloud-sync-menu[data-sync-state="offline"] .cloud-sync-label, .cloud-sync-menu[data-sync-state="conflict"] .cloud-sync-label, .cloud-sync-menu[data-sync-state="unauthorized"] .cloud-sync-label { color: #aa7044; }
@@ -882,10 +882,18 @@ body[data-study-role] .role-current-avatar { display: inline-block; width: 28px;
   .topbar .breadcrumb { min-width: 0; flex-wrap: wrap; gap: 4px; }
   .topbar-actions { flex-shrink: 0; gap: 7px; }
   .topbar-actions #github-link { display: none; }
-  .cloud-sync-menu > summary { padding: 8px; gap: 4px; }
+  .cloud-sync-trigger { padding: 8px; gap: 4px; }
   .cloud-sync-menu #study-sync-status { position: fixed; top: 72px; right: 16px; max-height: calc(100dvh - 90px); overflow: auto; }
 }
 [data-planner-key] .planner-owner > span:first-child { display: inline-block; width: 34px; height: 34px; flex-shrink: 0; }
+
+/* 云按钮直接同步；详情为独立的次要入口。 */
+.cloud-sync-trigger { font-family: inherit; color: inherit; min-height: 40px; }
+.cloud-sync-trigger:disabled { cursor: wait; opacity: .7; }
+.cloud-sync-details > summary { display: grid; place-items: center; width: 28px; min-height: 40px; border-radius: 9px; cursor: pointer; list-style: none; font-size: 20px; }
+.cloud-sync-details > summary::-webkit-details-marker { display: none; }
+.cloud-sync-details > summary:hover, .cloud-sync-details[open] > summary { background: #f3ebfa; }
+.cloud-sync-details > summary:focus-visible { outline: 2px solid #a477bb; outline-offset: 2px; }
 
 
 .role-card[data-role="bear"] { background: #f0f6ff; }
