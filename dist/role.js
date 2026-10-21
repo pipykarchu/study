@@ -15,6 +15,9 @@
   try { remembered = global.sessionStorage.getItem(SESSION_KEY); } catch (_) { /* URL 仍能固定当前角色。 */ }
   const id = explicit ? chosen[0] : chosen.length === 0 && Object.prototype.hasOwnProperty.call(roles, remembered) ? remembered : 'apple';
   const current = roles[id];
+  const EXTRA_ROLE_KEY = 'study-bloom-show-bear-v1';
+  let showBear = id === 'bear';
+  try { showBear = showBear || global.localStorage.getItem(EXTRA_ROLE_KEY) === '1'; } catch (_) {}
   let dialog, busy = false, leaving = false, notice = chosen.length && !explicit ? '网址里的角色无效，请重新选择。' : '';
   const needsChoice = !explicit && !Object.prototype.hasOwnProperty.call(roles, remembered);
   if (explicit) { try { global.sessionStorage.setItem(SESSION_KEY, id); } catch (_) {} }
@@ -115,14 +118,15 @@
     }
     if (dialog) return;
     dialog = global.document.createElement('dialog');
-    dialog.id = 'study-role-dialog'; dialog.className = 'study-role-dialog';
+    dialog.id = 'study-role-dialog'; dialog.className = 'study-role-dialog'; dialog.classList.toggle('has-bear', showBear);
     const heading = global.document.createElement('div'); heading.className = 'role-picker-heading';
     const title = global.document.createElement('h2'); title.id = 'study-role-title'; title.textContent = '今天是谁来学习？';
-    const intro = global.document.createElement('p'); intro.textContent = '用你的同一个 Codex 账号，切换小羊、小貅和小熊。每个角色分别保存目标、知识框架、笔记和测验。';
+    const intro = global.document.createElement('p'); intro.textContent = '选择你的学习空间。每个角色分别保存目标、知识框架、笔记和测验。';
     heading.append(title, intro); dialog.appendChild(heading); dialog.setAttribute('aria-labelledby', title.id);
     const list = global.document.createElement('div'); list.className = 'role-picker-list';
     for (const role of [roles.sheep, roles.apple, roles.bear]) {
       const button = global.document.createElement('button'); button.type = 'button'; button.className = 'role-card'; button.dataset.role = role.id;
+      button.hidden = role.id === 'bear' && !showBear;
       button.setAttribute('aria-pressed', String(role.id === id));
       const avatar = global.document.createElement('span'); avatar.className = 'role-avatar'; avatar.setAttribute('aria-hidden', 'true'); avatar.textContent = role.avatar;
       const name = global.document.createElement('strong'); name.textContent = role.name;
@@ -132,6 +136,16 @@
       list.appendChild(button);
     }
     dialog.appendChild(list);
+    const add = global.document.createElement('button'); add.type = 'button'; add.className = 'role-add-small'; add.textContent = '＋ 添加小熊'; add.hidden = showBear;
+    add.addEventListener('click', () => {
+      if (busy || leaving) return;
+      showBear = true;
+      try { global.localStorage.setItem(EXTRA_ROLE_KEY, '1'); } catch (_) { /* 本次打开仍可加入。 */ }
+      dialog.classList.add('has-bear'); add.hidden = true;
+      const bear = list.querySelector('[data-role="bear"]'); bear.hidden = false; bear.focus();
+      showNotice('已加入小熊，点击小熊头像进入学习空间。');
+    });
+    dialog.appendChild(add);
     const line = global.document.createElement('p'); line.className = 'role-switch-note'; line.setAttribute('role', 'status'); line.setAttribute('aria-live', 'polite'); line.textContent = notice || '切换角色，继续各自的学习记录。'; dialog.appendChild(line);
     const dismiss = global.document.createElement('button'); dismiss.type = 'button'; dismiss.className = 'text-button'; dismiss.textContent = '继续使用' + current.name; dismiss.addEventListener('click', close); dialog.appendChild(dismiss);
     global.document.body.appendChild(dialog);
