@@ -59,15 +59,15 @@
   }
   function chart(ratings, selected, variant, process=false) {
     const axes=process?processAxes:abilityAxes;
-    const point=(i,r)=>[200+Math.cos(-Math.PI/2+i*Math.PI/3)*r,174+Math.sin(-Math.PI/2+i*Math.PI/3)*r];
+    const point=(i,r)=>[200+Math.cos(-Math.PI/2+i*Math.PI/3)*r,190+Math.sin(-Math.PI/2+i*Math.PI/3)*r];
     const points=r=>axes.map((a,i)=>point(i,r).join(',')).join(' ');
     const known=axes.filter(a=>ratings[a.id]?.level).length;
-    return '<svg class="growth-radar-svg" viewBox="0 0 400 354" role="img" aria-label="'+(process?'六维学习过程，最外圈表示该阶段已经留下完成记录':'六维成长参考自评，三圈依次为起步、独立完成、举一反三；未评价的维度用空心点表示')+'">' +
-      [1,2,3].map(n=>'<polygon class="radar-ring" points="'+points(n*38)+'"/>').join('') +
-      axes.map((a,i)=>{const p=point(i,114);return '<line class="radar-spoke" x1="200" y1="174" x2="'+p[0]+'" y2="'+p[1]+'"/>';}).join('') +
-      (known?'<polygon class="radar-shape" points="'+axes.map((a,i)=>point(i,(ratings[a.id]?.level||0)*38).join(',')).join(' ')+'"/>':'') +
-      axes.map((a,i)=>{const p=point(i,(ratings[a.id]?.level||0)*38),l=point(i,148);return '<circle class="radar-dot '+(ratings[a.id]?'':'is-unknown')+'" cx="'+p[0]+'" cy="'+p[1]+'" r="4"/><text class="radar-axis '+(selected===i?'is-current':'')+'" x="'+l[0]+'" y="'+l[1]+'" text-anchor="middle">'+esc(a.names[variant])+'<tspan x="'+l[0]+'" dy="17">' + ratingText(ratings[a.id],process) + '</tspan></text>';}).join('') +
-      (!known?'<text class="radar-empty" x="200" y="170" text-anchor="middle">从一次真实学习开始<tspan x="200" dy="20">'+(process?'等待第一份阶段产出':'等待你的第一份评价')+'</tspan></text>':'') + '</svg>';
+    return '<svg class="growth-radar-svg" viewBox="0 0 400 380" role="img" aria-label="'+(process?'六维学习过程，最外圈表示该阶段已经留下完成记录':'六维成长参考自评，三圈依次为起步、独立完成、举一反三；未评价的维度用空心点表示')+'">' +
+      [1,2,3].map(n=>'<polygon class="radar-ring" points="'+points(n*44)+'"/>').join('') +
+      axes.map((a,i)=>{const p=point(i,132);return '<line class="radar-spoke" x1="200" y1="190" x2="'+p[0]+'" y2="'+p[1]+'"/>';}).join('') +
+      (known?'<polygon class="radar-shape" points="'+axes.map((a,i)=>point(i,(ratings[a.id]?.level||0)*44).join(',')).join(' ')+'"/>':'') +
+      axes.map((a,i)=>{const p=point(i,(ratings[a.id]?.level||0)*44),l=point(i,163);return '<circle class="radar-dot '+(ratings[a.id]?'':'is-unknown')+'" cx="'+p[0]+'" cy="'+p[1]+'" r="4"/><text class="radar-axis '+(selected===i?'is-current':'')+'" x="'+l[0]+'" y="'+l[1]+'" text-anchor="middle">'+esc(a.names[variant])+'<tspan x="'+l[0]+'" dy="17">' + ratingText(ratings[a.id],process) + '</tspan></text>';}).join('') +
+      (!known?'<text class="radar-empty" x="200" y="185" text-anchor="middle">从一次真实学习开始<tspan x="200" dy="20">'+(process?'等待第一份阶段产出':'等待你的第一份评价')+'</tspan></text>':'') + '</svg>';
   }
   function render(data) {
     const state=view(data), process=state.mode==='process', axes=process?processAxes:abilityAxes;

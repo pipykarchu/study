@@ -213,3 +213,15 @@ body[data-study-role] .wiki-avatar { height:auto; aspect-ratio:1; font-size:0; b
 .panorama-empty { grid-column:1/-1; padding:10px 0; color:#8b7996; }
 @media(max-width:1050px) { .panorama-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media(max-width:600px) { .panorama { padding:15px; } .panorama-heading { align-items:flex-start; } .panorama-heading .button { flex-shrink:0; } .panorama-heading p { font-size:11px; } .panorama-plans { grid-template-columns:1fr; } .panorama-metrics { gap:7px; } .panorama-metrics>div { padding:12px 8px; } .panorama-metrics small { font-size:10px; } }
+.wiki-node-progress { margin:18px 0; padding:15px; background:#faf5ff; border:1px solid #eadcf3; border-radius:13px; }
+.wiki-node-progress-heading { display:flex; justify-content:space-between; gap:10px; align-items:center; font-size:12px; color:#76558f; }
+.wiki-node-progress-heading>span { flex-shrink:0; font-size:18px; font-weight:600; }
+.wiki-node-progress p,.wiki-node-progress>small { color:#95839f; font-size:11px; line-height:1.7; }
+.wiki-node-progress progress { display:block; appearance:none; width:100%; height:6px; border:0; border-radius:6px; overflow:hidden; margin:10px 0 6px; background:#eae0f2; }
+.wiki-node-progress progress::-webkit-progress-bar { background:#eae0f2; }
+.wiki-node-progress progress::-webkit-progress-value { background:#ac83c6; }
+.wiki-node-progress progress::-moz-progress-bar { background:#ac83c6; }
+.wiki-node-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:12px 0; }
+.wiki-node-facts>span { font-size:10px; color:#96869e; line-height:1.7; }
+.wiki-node-facts b { display:block; font-size:13px; color:#7a608b; font-weight:500; }
+@media(max-width:1000px) { .wiki-workspace.wiki-overview { grid-template-columns:minmax(0,1fr); } .wiki-workbench { scroll-margin-top:85px; } }
