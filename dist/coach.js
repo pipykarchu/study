@@ -56,7 +56,7 @@
   function contextText() {
     if (!includeContext) return '';
     const b = context.boundaries || {}, st = stageInfo();
-    return `学习角色：${context.roleName || window.StudyRole?.name || '貔貅'}（${context.roleId || window.StudyRole?.id || 'apple'}）\n学习方向：${context.profile || ''}\n目标：${String(context.goal || '').slice(0,1200)}\n用途：${String(context.why || '').slice(0,800)}\n验收作品：${String(context.outcome || '').slice(0,800)}\n每次时间：${context.minutes || 45} 分钟\n必须掌握：${(b.must || []).join('；').slice(0,1200)}\n按需了解：${(b.optional || []).join('；').slice(0,600)}\n暂时不学：${(b.later || []).join('；').slice(0,600)}\n当前学习阶段：${st.title}${focusedContext()}\n知识节点：${(context.nodes || []).map(n => `${n.name}：${n.description || ''}；练习：${n.exercise || ''}；验收：${n.acceptance || ''}`).join('\n').slice(0,3500)}\n教学要求：用中文大白话，一次只推进一个小问题，先问再讲，练习和测验先不给答案；不要因我发了消息就宣称掌握。`.slice(0,12000);
+    return `学习角色：${context.roleName || window.StudyRole?.name || '小貅'}（${context.roleId || window.StudyRole?.id || 'apple'}）\n学习方向：${context.profile || ''}\n目标：${String(context.goal || '').slice(0,1200)}\n用途：${String(context.why || '').slice(0,800)}\n验收作品：${String(context.outcome || '').slice(0,800)}\n每次时间：${context.minutes || 45} 分钟\n必须掌握：${(b.must || []).join('；').slice(0,1200)}\n按需了解：${(b.optional || []).join('；').slice(0,600)}\n暂时不学：${(b.later || []).join('；').slice(0,600)}\n当前学习阶段：${st.title}${focusedContext()}\n知识节点：${(context.nodes || []).map(n => `${n.name}：${n.description || ''}；练习：${n.exercise || ''}；验收：${n.acceptance || ''}`).join('\n').slice(0,3500)}\n教学要求：用中文大白话，一次只推进一个小问题，先问再讲，练习和测验先不给答案；不要因我发了消息就宣称掌握。`.slice(0,12000);
   }
   function stateText() {
     if (checking || !status) return '正在检查我的 Codex…';

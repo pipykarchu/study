@@ -127,7 +127,7 @@ async function identify(request, env) {
 }
 function studyRole(url) {
   const values = url.searchParams.getAll('role');
-  if (values.length > 1 || values.length === 1 && !['apple', 'sheep', 'bear'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择貔貅、小羊或小熊。');
+  if (values.length > 1 || values.length === 1 && !['apple', 'sheep', 'bear'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择小貅、小羊或小熊。');
   return values[0] || 'apple';
 }
 function roleStorageKey(id, roleId) {

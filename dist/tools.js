@@ -54,7 +54,7 @@
     if(!def.read){await window.StudySync.ensureWritable();assertScope(invocation);}
     const result=def.run(input);
     if(def.read)return {ok:true,result};
-    const savedScope={roleId:invocation.roleId,roleName:window.StudyRole?.name||'貔貅',profileId:def.name==='study_select_profile'?input.profileId:invocation.profileId};
+    const savedScope={roleId:invocation.roleId,roleName:window.StudyRole?.name||'小貅',profileId:def.name==='study_select_profile'?input.profileId:invocation.profileId};
     window.StudyApp.refresh();
     try {
       const saved=await window.StudySync.flush();

@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
   const roles = Object.freeze({
-    apple: Object.freeze({id: 'apple', name: '貔貅', avatar: '🐾', description: '我的学习知识框架'}),
+    apple: Object.freeze({id: 'apple', name: '小貅', avatar: '🐾', description: '我的学习知识框架'}),
     sheep: Object.freeze({id: 'sheep', name: '小羊', avatar: '🐑', description: '小羊的学习知识框架'}),
     bear: Object.freeze({id: 'bear', name: '小熊', avatar: '🐻‍❄️', description: '小熊的学习知识框架'})
   });
@@ -27,7 +27,7 @@
     return url.pathname + url.search;
   }
   function urlFor(next) {
-    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅、小羊或小熊。');
+    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择小貅、小羊或小熊。');
     const target = new global.URL(global.location.href);
     target.searchParams.set('role', next);
     return target.href;
@@ -49,7 +49,7 @@
     catch (_) { return false; }
   }
   async function choose(next) {
-    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅、小羊或小熊。');
+    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择小貅、小羊或小熊。');
     if (busy || leaving) return false;
     if (next === id && explicit) { close(); return true; }
     busy = true;
@@ -118,7 +118,7 @@
     dialog.id = 'study-role-dialog'; dialog.className = 'study-role-dialog';
     const heading = global.document.createElement('div'); heading.className = 'role-picker-heading';
     const title = global.document.createElement('h2'); title.id = 'study-role-title'; title.textContent = '今天是谁来学习？';
-    const intro = global.document.createElement('p'); intro.textContent = '用你的同一个 Codex 账号，切换貔貅、小羊和小熊。每个角色分别保存目标、知识框架、笔记和测验。';
+    const intro = global.document.createElement('p'); intro.textContent = '用你的同一个 Codex 账号，切换小貅、小羊和小熊。每个角色分别保存目标、知识框架、笔记和测验。';
     heading.append(title, intro); dialog.appendChild(heading); dialog.setAttribute('aria-labelledby', title.id);
     const list = global.document.createElement('div'); list.className = 'role-picker-list';
     for (const role of Object.values(roles)) {
