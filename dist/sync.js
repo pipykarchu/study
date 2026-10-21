@@ -242,6 +242,13 @@
     const link = global.document.createElement('a'); link.href = url; link.download = '貅知识-同步冲突保留副本.json'; link.click(); global.URL.revokeObjectURL(url);
   }
   function mount() {
+    const summary = global.document.getElementById('study-sync-label');
+    const current = status();
+    if (summary) {
+      summary.textContent = localOnly ? '仅本机' : current.cloudSaved ? '已同步' : ({loading: '连接中', syncing: '同步中', conflict: '有冲突', unauthorized: '请登录', offline: '离线', ready: meta.dirty ? '待同步' : '待确认'})[state];
+      const menu = global.document.getElementById('study-sync-menu');
+      if (menu) menu.dataset.syncState = localOnly ? 'local' : current.cloudSaved ? 'saved' : state;
+    }
     const root = global.document.getElementById('study-sync-status');
     if (!root) return;
     root.replaceChildren(); root.className = 'study-sync-status'; root.dataset.syncState = state;
@@ -253,6 +260,7 @@
     const button = (label, action) => { const el = global.document.createElement('button'); el.type = 'button'; el.textContent = label; el.addEventListener('click', () => { el.disabled = true; Promise.resolve().then(action).catch(e => { if (e.kind !== 'conflict') { error = e.message; notify(); } }).finally(() => { el.disabled = false; }); }); root.appendChild(el); };
     if (conflict) { button('使用云端', () => resolveConflict('cloud')); button('保留本机并上传', () => resolveConflict('local')); }
     else if (state === 'offline' || state === 'unauthorized') button('重试同步', retry);
+    else if (state === 'ready') button('立即同步', retry);
     if (meta.backup) button('下载保留副本', downloadBackup);
   }
   function peerChanged(event) {
@@ -305,3 +313,4 @@
   global.StudySync = Object.freeze({ready, status, mount, flush, retry, ensureWritable, resolveConflict, exportBackup: () => meta.backup ? clone(meta.backup) : null});
   notify();
 })(window);
+

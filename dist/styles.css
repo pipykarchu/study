@@ -862,4 +862,28 @@ body[data-study-role="apple"], .role-card[data-role="apple"], [data-planner-key^
 body[data-study-role="sheep"], .role-card[data-role="sheep"], [data-planner-key^="sheep:"] { --study-role-avatar: url('./sheep.webp'); }
 .role-card .role-avatar, body[data-study-role] .avatar, body[data-study-role] .role-current-avatar, [data-planner-key] .planner-owner > span:first-child, body[data-study-role] .coach-message.user .coach-message-avatar { background: #f8eff9 var(--study-role-avatar) center / contain no-repeat; color: transparent; border: 0; border-radius: 22%; font-size: 0; box-shadow: inset 0 0 0 1px #ffffff80; }
 body[data-study-role] .role-current-avatar { display: inline-block; width: 28px; height: 28px; flex: 0 0 28px; }
+/* 顶部头像负责角色切换，云同步详情就近展开。 */
+#study-role-control { position: relative; flex-shrink: 0; }
+#study-role-control .study-role-button { width: 42px; height: 42px; padding: 3px; border-radius: 13px; background: #fff; justify-content: center; }
+#study-role-control .role-current-avatar { width: 34px; height: 34px; flex-basis: 34px; }
+#study-role-control .study-role-button:focus-visible, .cloud-sync-menu > summary:focus-visible { outline: 2px solid #a477bb; outline-offset: 3px; }
+.role-switch-banner { position: absolute; top: 50px; right: 0; width: 240px; padding: 10px 12px; background: #fff8fd; border: 1px solid #ecdce9; border-radius: 12px; box-shadow: 0 8px 26px #61427215; z-index: 30; font-size: 12px; }
+.cloud-sync-menu { position: relative; flex-shrink: 0; color: #775787; }
+.cloud-sync-menu > summary { display: flex; align-items: center; gap: 6px; padding: 9px 11px; border: 1px solid #eadff1; border-radius: 12px; background: #fcf8ff; cursor: pointer; list-style: none; font-size: 12px; white-space: nowrap; }
+.cloud-sync-menu > summary::-webkit-details-marker { display: none; }
+.cloud-sync-menu[open] > summary, .cloud-sync-menu > summary:hover { background: #f3ebfa; }
+.cloud-sync-label { font-size: 10px; color: #8b7996; }
+.cloud-sync-menu[data-sync-state="saved"] .cloud-sync-label { color: #56836b; }
+.cloud-sync-menu[data-sync-state="offline"] .cloud-sync-label, .cloud-sync-menu[data-sync-state="conflict"] .cloud-sync-label, .cloud-sync-menu[data-sync-state="unauthorized"] .cloud-sync-label { color: #aa7044; }
+.cloud-sync-menu #study-sync-status { position: absolute; top: calc(100% + 10px); right: 0; z-index: 40; width: min(300px, calc(100vw - 32px)); padding: 16px; border: 1px solid #eadff1; border-radius: 16px; background: #fffcff; box-shadow: 0 12px 36px #60437220; font-size: 12px; }
+.cloud-sync-menu #study-sync-status p { margin: 0 0 6px; color: #664b78; }
+.cloud-sync-menu #study-sync-status small { display: block; margin: 6px 0; }
+@media (max-width: 680px) {
+  .topbar .breadcrumb { min-width: 0; flex-wrap: wrap; gap: 4px; }
+  .topbar-actions { flex-shrink: 0; gap: 7px; }
+  .topbar-actions #github-link { display: none; }
+  .cloud-sync-menu > summary { padding: 8px; gap: 4px; }
+  .cloud-sync-menu #study-sync-status { position: fixed; top: 72px; right: 16px; max-height: calc(100dvh - 90px); overflow: auto; }
+}
 [data-planner-key] .planner-owner > span:first-child { display: inline-block; width: 34px; height: 34px; flex-shrink: 0; }
+

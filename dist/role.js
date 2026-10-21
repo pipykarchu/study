@@ -100,7 +100,8 @@
       const button = global.document.createElement('button');
       button.type = 'button'; button.className = 'study-role-button';
       const mark = global.document.createElement('span'); mark.className = 'role-current-avatar'; mark.setAttribute('aria-hidden', 'true'); mark.textContent = current.avatar;
-      const label = global.document.createElement('span'); label.textContent = current.name + ' · 切换'; button.append(mark, label);
+      button.appendChild(mark);
+      button.title = current.name + ' · 点击切换角色'; button.setAttribute('aria-haspopup', 'dialog');
       button.setAttribute('aria-label', '当前角色' + current.name + '，切换学习角色');
       button.addEventListener('click', show); root.appendChild(button);
       try {
@@ -140,3 +141,4 @@
   if (global.document.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', ready, {once: true});
   else ready();
 })(window);
+
