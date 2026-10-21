@@ -1,9 +1,10 @@
-/* 两个学习角色共用站点所有者账号；角色分开保存内容，不是登录或权限。 */
+/* 学习角色共用站点所有者账号；各角色分开保存内容，不是独立登录。 */
 (function (global) {
   'use strict';
   const roles = Object.freeze({
     apple: Object.freeze({id: 'apple', name: '貔貅', avatar: '🐾', description: '我的学习知识框架'}),
-    sheep: Object.freeze({id: 'sheep', name: '小羊', avatar: '🐑', description: '小羊的学习知识框架'})
+    sheep: Object.freeze({id: 'sheep', name: '小羊', avatar: '🐑', description: '小羊的学习知识框架'}),
+    bear: Object.freeze({id: 'bear', name: '小熊', avatar: '🐻‍❄️', description: '小熊的学习知识框架'})
   });
   const SESSION_KEY = 'study-bloom-active-role-v1';
   const SWITCH_NOTE_KEY = 'study-bloom-role-switch-note-v1';
@@ -18,7 +19,7 @@
   const needsChoice = !explicit && !Object.prototype.hasOwnProperty.call(roles, remembered);
   if (explicit) { try { global.sessionStorage.setItem(SESSION_KEY, id); } catch (_) {} }
 
-  function storageKey(base) { return id === 'apple' ? base : base + ':sheep'; }
+  function storageKey(base) { return id === 'apple' ? base : base + ':' + id; }
   function endpoint(base = '/api/study/state') {
     const url = new global.URL(base, global.location.href);
     if (url.origin !== global.location.origin) throw new Error('学习接口必须属于本站。');
@@ -26,7 +27,7 @@
     return url.pathname + url.search;
   }
   function urlFor(next) {
-    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅或小羊。');
+    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅、小羊或小熊。');
     const target = new global.URL(global.location.href);
     target.searchParams.set('role', next);
     return target.href;
@@ -48,7 +49,7 @@
     catch (_) { return false; }
   }
   async function choose(next) {
-    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅或小羊。');
+    if (!Object.prototype.hasOwnProperty.call(roles, next)) throw new Error('请选择貔貅、小羊或小熊。');
     if (busy || leaving) return false;
     if (next === id && explicit) { close(); return true; }
     busy = true;
@@ -117,7 +118,7 @@
     dialog.id = 'study-role-dialog'; dialog.className = 'study-role-dialog';
     const heading = global.document.createElement('div'); heading.className = 'role-picker-heading';
     const title = global.document.createElement('h2'); title.id = 'study-role-title'; title.textContent = '今天是谁来学习？';
-    const intro = global.document.createElement('p'); intro.textContent = '用你的同一个 Codex 账号，分别保存目标、知识框架、笔记和测验。可以切换查看两个角色的记录。';
+    const intro = global.document.createElement('p'); intro.textContent = '用你的同一个 Codex 账号，切换貔貅、小羊和小熊。每个角色分别保存目标、知识框架、笔记和测验。';
     heading.append(title, intro); dialog.appendChild(heading); dialog.setAttribute('aria-labelledby', title.id);
     const list = global.document.createElement('div'); list.className = 'role-picker-list';
     for (const role of Object.values(roles)) {

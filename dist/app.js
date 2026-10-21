@@ -54,7 +54,7 @@ const resources=[
   {title:'study · 你的学习网站',kind:'我的 GitHub 项目',desc:'保存貅知识网站源码，持续积累学习框架与项目实践。',url:'https://github.com/pipykarchu/study',emoji:'⌘'},
   {title:'bili-learn · 视频学习助手',kind:'我的 GitHub 项目',desc:'把视频学习与笔记、纲要和知识整理连接起来，可作为学习产品实践对象。',url:'https://github.com/pipykarchu/bili-learn',emoji:'▹'}
 ];
-function freshState(){return {version:1,profile:'product',goals:{},completed:{},tasks:{},notes:{},reviews:[],projectTasks:{},boundaries:{},frameworks:{},materials:[],imaTargets:{},minutes:45,day:0,timer:{remaining:1500,deadline:null}};}
+function freshState(){return {version:1,profile:window.StudyRole?.id && window.StudyRole.id!=='apple'?'custom':'product',goals:{},completed:{},tasks:{},notes:{},reviews:[],projectTasks:{},boundaries:{},frameworks:{},materials:[],imaTargets:{},minutes:45,day:0,timer:{remaining:1500,deadline:null}};}
 const STORAGE=window.StudyRole?.storageKey('study-bloom-v1')||'study-bloom-v1';
 function activeScope(){return {roleId:window.StudyRole?.id||'apple',profileId:state.profile};}
 function requireScope(expected){if(window.StudyRole?.isSwitching?.()||expected.roleId!==(window.StudyRole?.id||'apple')||expected.profileId!==undefined&&expected.profileId!==state.profile)throw Error('角色或学习方向已变化，请重新打开后再保存。');}
@@ -171,8 +171,8 @@ function confirmImport(data,learningData,backupRole){
   const expected={roleId:activeScope().roleId};
   // 未标角色的旧版备份产生于双角色功能之前，只归属原角色貔貅。
   const origin=backupRole===undefined?'apple':backupRole;
-  if(!['apple','sheep'].includes(origin)){toast('备份中的角色无效，原有记录未被替换。');return;}
-  if(origin!==expected.roleId){toast(`这是${origin==='apple'?'貔貅':'小羊'}的备份，请切换到对应角色再导入。原有记录未被替换。`);return;}
+  if(!['apple','sheep','bear'].includes(origin)){toast('备份中的角色无效，原有记录未被替换。');return;}
+  if(origin!==expected.roleId){toast(`这是${({apple:'貔貅',sheep:'小羊',bear:'小熊'}[origin])}的备份，请切换到对应角色再导入。原有记录未被替换。`);return;}
   try{requireScope(expected);}catch(error){toast(error.message);return;}
   modal('恢复当前角色的学习记录',`<p>只替换${esc(window.StudyRole?.name||'貔貅')}的目标、笔记和进度，并在连接成功后同步。另一个角色的记录不受影响。建议先导出当前记录。</p><div class="modal-actions"><button class="button secondary" data-action="export-json">先备份当前记录</button><button class="button primary" id="confirm-import">确认导入</button></div>`);
   $('#confirm-import').addEventListener('click',()=>{try{requireScope(expected);if(learningData!==undefined)window.StudyLearning.importData(learningData);}catch(error){toast(window.StudyRole?.isSwitching?.()?error.message:'学习测验备份格式有误，原有记录未被替换。');return;}state=data;state.timer.deadline=null;window.dispatchEvent(new CustomEvent('study-workspace-reset',{detail:{roleId:activeScope().roleId}}));save();$('#app-modal').close();render();toast('当前角色的备份已恢复，可以继续学习了。');},{once:true});

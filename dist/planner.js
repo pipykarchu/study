@@ -6,7 +6,7 @@
   const levels = ['认识概念', '解释原理', '能独立应用', '能够排错', '能够迁移创造'];
   const fields = ['goal', 'why', 'outcome', 'level', 'minutes'];
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const keyOf = data => `${data.roleId === 'sheep' ? 'sheep' : 'apple'}:${data.profileId || 'product'}`;
+  const keyOf = data => `${data.roleId || 'apple'}:${data.profileId || 'product'}`;
   const context = () => window.StudyApp && window.StudyApp.getContext ? window.StudyApp.getContext() : null;
   const currentTarget = (key, epoch=lifecycle) => {const data=context();return !hidden&&epoch===lifecycle&&!window.StudyRole?.isSwitching?.()&&data&&keyOf(data)===key;};
   const findPanel = key => Array.from(document.querySelectorAll('[data-study-planner]')).find(el => el.dataset.plannerKey === key);
@@ -19,8 +19,8 @@
     return {goal:data.goal || '', why:data.why || '', outcome:data.outcome || '', level:levels.includes(data.level) ? data.level : '能独立应用', minutes:Number(data.minutes) || 45};
   }
   function buildPrompt(data) {
-    const roleId = data.roleId === 'sheep' ? 'sheep' : 'apple';
-    const roleName = data.roleName || (roleId === 'sheep' ? '小羊' : '貔貅');
+    const roleId = data.roleId || 'apple';
+    const roleName = data.roleName || ({apple:'貔貅',sheep:'小羊',bear:'小熊'}[roleId]);
     return [
       '请帮我在貅知识学习网站里搭建知识框架。',
       '先调用 study_get_context 读取本站当前角色、学习方向和已保存目标。',
@@ -85,9 +85,8 @@
   function render(input) {
     const data = input || context() || {}, key = keyOf(data), item = entry(data);
     const value = item.dirty ? item.values : valuesFrom(data);
-    const sheep = data.roleId === 'sheep';
-    const name = data.roleName || (sheep ? '小羊' : '貔貅');
-    const avatar = data.roleAvatar || (sheep ? '🐑' : '🐾');
+    const name = data.roleName || ({apple:'貔貅',sheep:'小羊',bear:'小熊'}[data.roleId || 'apple']);
+    const avatar = data.roleAvatar || ({apple:'🐾',sheep:'🐑',bear:'🐻‍❄️'}[data.roleId || 'apple']);
     return `<section class="panel study-planner" data-study-planner data-planner-key="${esc(key)}" aria-busy="${item.busy}" aria-labelledby="planner-title"><div class="planner-heading"><div><div class="section-kicker">GROW YOUR OWN LEARNING MAP</div><h2 id="planner-title">写下目标，让知识框架长出来</h2><p class="planner-intro">输入目标 → 在本站对话确认发送 → Codex 生成并保存</p></div><span class="planner-owner"><span aria-hidden="true">${esc(avatar)}</span><span>${esc(name)}<small>${esc(data.profile || '当前学习方向')}</small></span></span></div><form data-planner-form><div class="planner-fields"><label class="field planner-wide">这次想做到什么？<input name="goal" required maxlength="3000" value="${esc(value.goal)}" placeholder="例如：独立做出一个能用的小网站"></label><label class="field">为什么想学？<textarea name="why" required maxlength="3000" rows="3" placeholder="会用在哪个真实场景？">${esc(value.why)}</textarea></label><label class="field">用什么证明学会了？<textarea name="outcome" required maxlength="3000" rows="3" placeholder="写下可以演示、检查的作品或结果">${esc(value.outcome)}</textarea></label><label class="field">希望学到哪一步？<select name="level">${levels.map(level => `<option ${value.level === level ? 'selected' : ''}>${esc(level)}</option>`).join('')}</select></label><label class="field">每次学习几分钟？<input name="minutes" type="number" min="15" max="180" step="1" required value="${esc(value.minutes)}"></label></div><div class="planner-actions"><button class="button secondary" type="submit" value="save" data-planner-submit ${item.busy ? 'disabled' : ''}>保存目标</button><button class="button primary" type="submit" value="prepare" data-planner-submit ${item.busy ? 'disabled' : ''}>保存并打开 Codex 生成 <span aria-hidden="true">↗</span></button></div></form><p class="planner-status ${item.error ? 'planner-error' : ''}" data-planner-status role="status" aria-live="polite">${esc(item.status)}</p><div data-planner-prepared>${preparedMarkup(item)}</div><details class="planner-help"><summary>怎样让 Codex 帮我回填？</summary><ol><li>先在这里填写目标，选择“保存并打开 Codex 生成”。</li><li>会打开本站学习对话，检查指令后点击发送。</li><li>Codex 读取当前角色，生成框架后保存到同一角色。</li></ol><p>使用你自己的会员额度，连接电脑需保持运行。连接未就绪时，记录和测验仍可用，也可备用复制指令。无需在网页输入密码或 API 密钥。</p></details></section>`;
   }
   document.addEventListener('input', event => {

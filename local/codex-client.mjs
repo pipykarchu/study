@@ -66,7 +66,7 @@ export class StudyError extends Error {
 }
 
 export function learningScope({ roleId, profileId } = {}) {
-  if (!['apple', 'sheep'].includes(roleId) || !['product', 'coding', 'custom', 'fde'].includes(profileId)) {
+  if (!['apple', 'sheep', 'bear'].includes(roleId) || !['product', 'coding', 'custom', 'fde'].includes(profileId)) {
     throw new StudyError('学习角色或方向已变化，请刷新后重新提问。', 400, 'learning_scope');
   }
   return `${roleId}:${profileId}`;

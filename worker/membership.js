@@ -7,7 +7,7 @@ const bridgeNonce = value => typeof value === 'string' && /^[A-Za-z0-9_-]{16,128
 const bridgeId = value => typeof value === 'string' && /^[a-f0-9-]{36}$/.test(value);
 const bridgeFault = (status, code, message) => { throw new HttpError(status, code, message); };
 function bridgeScope(body) {
-  if (!object(body) || !['apple', 'sheep'].includes(body.roleId) || !PROFILE_IDS.includes(body.profileId)) bridgeFault(400, 'invalid_scope', '角色或学习方向无效，请刷新后重试。');
+  if (!object(body) || !['apple', 'sheep', 'bear'].includes(body.roleId) || !PROFILE_IDS.includes(body.profileId)) bridgeFault(400, 'invalid_scope', '角色或学习方向无效，请刷新后重试。');
 }
 async function bridgeBody(request) {
   const body = await readBody(request);

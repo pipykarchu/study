@@ -239,7 +239,7 @@
     if(context&&same(scope(context))&&(!event.detail?.profile||event.detail.profile===context.profileId)&&document.querySelector('#study-wiki'))global.StudyNetwork?.refresh?.(current(),{selectedIndex:entry().nodeIndex});
   });
   global.addEventListener('study-role-leaving',()=>{leaving=true;abortRequests();global.StudyNetwork?.dispose?.();});
-  global.addEventListener('study-workspace-reset',event=>{const roleId=event.detail?.roleId;if(!['apple','sheep'].includes(roleId))return;for(const key of states.keys())if(key.startsWith(roleId+':'))states.delete(key);if(context?.roleId===roleId)abortRequests();});
+  global.addEventListener('study-workspace-reset',event=>{const roleId=event.detail?.roleId;if(!['apple','sheep','bear'].includes(roleId))return;for(const key of states.keys())if(key.startsWith(roleId+':'))states.delete(key);if(context?.roleId===roleId)abortRequests();});
   global.addEventListener('pagehide',()=>{leaving=true;abortRequests();global.StudyNetwork?.dispose?.();});
   global.addEventListener('pageshow',()=>{leaving=false;if(context&&document.querySelector('#study-wiki'))mount();});
   global.StudyWiki=Object.freeze({render,mount,getFocus:()=>context?entry().nodeIndex:null,openPane,renderLibrary:data=>{entry(data).pane='materials';return render(data);}});

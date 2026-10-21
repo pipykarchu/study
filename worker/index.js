@@ -127,12 +127,12 @@ async function identify(request, env) {
 }
 function studyRole(url) {
   const values = url.searchParams.getAll('role');
-  if (values.length > 1 || values.length === 1 && !['apple', 'sheep'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择貔貅或小羊。');
+  if (values.length > 1 || values.length === 1 && !['apple', 'sheep', 'bear'].includes(values[0])) throw new HttpError(400, 'invalid_role', '请选择貔貅、小羊或小熊。');
   return values[0] || 'apple';
 }
 function roleStorageKey(id, roleId) {
   // Verified identity excludes control characters; this internal suffix cannot collide with a real user id.
-  return roleId === 'sheep' ? id + '\u001frole:sheep' : id;
+  return roleId === 'apple' ? id : id + '\u001frole:' + roleId;
 }
 function sameOrigin(request, requireOrigin = false) {
   const origin = request.headers.get('Origin');

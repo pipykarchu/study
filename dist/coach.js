@@ -24,7 +24,7 @@
     const current = window.StudyApp?.getContext?.() || scope();
     return !pageLeaving && !window.StudyRole?.isSwitching?.() && scopeKey(value) === scopeKey() && scopeKey(value) === scopeKey(current);
   };
-  const chatKey = value => `study-coach-chat-v2:${value.profileId}${value.roleId === 'sheep' ? ':sheep' : ''}`;
+  const chatKey = value => `study-coach-chat-v2:${value.profileId}${value.roleId && value.roleId !== 'apple' ? ':' + value.roleId : ''}`;
   const stages = () => learning()?.stages || fallbackStages;
   const snapshot = () => learning()?.get(profileKey()) || {stage:'frame',completedStages:[],quiz:{attempts:[],bestScore:null,lastScore:null},recentEvidence:[]};
   const stageInfo = () => stages().find(s => s.id === snapshot().stage) || stages()[0];
