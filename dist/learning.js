@@ -6,7 +6,7 @@
 (function (global) {
   'use strict';
   const KEY = global.StudyRole?.storageKey('study-bloom-learning-v2') || 'study-bloom-learning-v2';
-  const PROFILE_IDS = ['product', 'coding', 'custom', 'fde'];
+  const PROFILE_IDS = ['product', 'coding', 'custom', 'fde', 'mobile'];
   const DAY = 86400000;
   const MAX_TIME = 8640000000000000 - 3 * DAY;
   const LIMIT = 100;
@@ -65,6 +65,20 @@
       Q(5, '系统技术上已上线，哪项更能证明客户真正采纳？', ['项目代码量增加', '所有功能都有截图', '目标用户持续用于真实任务，工作流指标改善，并有培训与反馈机制'], 2, 'FDE 的交付结果包含生产采纳和可衡量的工作流影响。技术上线是起点，还需要支持用户形成稳定使用方式。'),
       Q(5, '项目复盘时，怎样让现场经验帮助后续项目？', ['记录结果、失败与取舍，把可复用做法整理成工具或交付手册，并向产品团队反馈', '只说项目很成功，不记录限制', '只保存一次演示，不整理实际使用反馈'], 0, '复盘应保留证据与边界，并把有效模式沉淀为可复用工具、手册和产品反馈，减少下一次重复踩坑。')
     ],
+    mobile: [
+      Q(0, "首周尚未配置原生开发环境，最合适的起点是？", ["先完成全部 ArkTS 课程", "用 HTML/CSS/JS 做手机可用的单页小作品", "同时学习全部移动端框架"], 1, "先用低门槛移动网页练 UI 与事件；它不是 HarmonyOS 原生应用。"),
+      Q(0, "检验打卡卡片的手机布局，应做什么？", ["只看电脑大屏截图", "按钮能看到就够了", "检查窄屏无横向滚动、文字可读和操作区域可点击"], 2, "布局要在明确的屏幕宽度实际检查，不能用桌面截图替代。"),
+      Q(1, "用户输入只有空格的目标，应该怎样处理？", ["trim 后判断为空，提示并拒绝保存", "直接算一个有效目标", "隐藏输入框即可"], 0, "输入应先去掉首尾空白再校验，并给出清楚反馈。"),
+      Q(1, "点击按钮执行打卡，哪个关系正确？", ["CSS 自动完成业务处理", "绑定事件，事件处理函数更新数据并反馈", "每次点击重装应用"], 1, "事件连接用户操作与处理函数，交互反馈需要实际实现。"),
+      Q(2, "列表和已完成数常常不一致，首先应怎样改进？", ["分别随意修改两个区域", "用按钮文字充当全部数据", "维护统一状态，由状态渲染列表与计数"], 2, "统一状态减少多个界面副本之间的不一致。"),
+      Q(2, "两个任务标题相同，删除时应依据什么？", ["各自稳定且唯一的 id", "标题的第一个字", "当前显示颜色"], 0, "稳定 id 能区分同名任务，避免删错对象。"),
+      Q(3, "从 localStorage 恢复任务时，哪种做法更稳妥？", ["解析成功就信任所有字段", "捕获解析异常并校验结构，损坏时提示并保留可用界面", "直接执行保存的字符串"], 1, "本地数据也可能损坏，需要解析和结构校验以及失败反馈。"),
+      Q(3, "同一浏览器刷新后任务仍在，能证明什么？", ["已具备跨设备云同步", "已完成原生数据库开发", "该环境中的本地恢复通过了这次测试"], 2, "一次本地测试只支持对应环境下的恢复结论，不证明云同步或原生能力。"),
+      Q(4, "点击无反应时，合理的调试顺序是？", ["复现并记录操作，检查控制台与事件绑定，定位后回归", "随机改一百行代码", "只刷新直到偶尔成功"], 0, "稳定复现和错误证据能帮助定位，修复后还要验证相关流程。"),
+      Q(4, "保存功能的验收至少还应包含什么？", ["只有正常保存截图", "无数据、损坏数据及保存失败的行为", "只看代码行数"], 1, "正常与异常路径都需要明确预期和实际结果。"),
+      Q(5, "使用 AI 辅助开发后，简历怎样写更准确？", ["把生成内容全部称为独立开发", "通过参考题就声称熟练原生开发", "说明自己实现和验证的部分、AI 协助范围及可复现证据"], 2, "贡献必须依据真实行动和验证，参考题分数与 AI 输出不能替代项目能力。"),
+      Q(5, "进入 HarmonyOS 专项前最合理的安排是？", ["先核对设备与环境条件，再补 ArkTS/ArkUI 并迁移一个小功能", "直接写已掌握 ArkTS", "把移动网页重命名为原生应用"], 0, "专项应从真实环境与语言基础开始，不能假设已配置或把网页经验直接当原生成果。")
+    ],
     custom: [
       Q(0, '开始学一个新主题，哪种目标最清楚？', ['尽可能学完一切', '说出实际用途、目标水平，并规定一个可演示成果', '先收藏一百份资料'], 1, '可观察的用途、水平和成果能帮助确定边界，避免无目的地积累资料。'),
       Q(0, '遇到与当前成果无关的高阶内容，应该怎样处理？', ['立刻抛开原目标深挖', '认定永远没有价值', '记录到暂不学清单，当前先完成目标需要的部分'], 2, '暂不学习是范围管理。保留线索，待应用场景出现后再决定是否深入。'),
@@ -85,7 +99,7 @@
   const profileId = profile => {if (!PROFILE_IDS.includes(profile)) throw new Error('未知学习方向'); return profile;};
   const stageId = stage => {if (!STAGE_IDS.includes(stage)) throw new Error('未知学习阶段'); return stage;};
   const fresh = () => ({stage: 'frame', completedStages: [], quiz: {attempts: [], active: null}, recentEvidence: []});
-  const empty = () => ({version: 2, profiles: {product: fresh(), coding: fresh(), custom: fresh(), fde: fresh()}});
+  const empty = () => ({version: 2, profiles: {product: fresh(), coding: fresh(), custom: fresh(), fde: fresh(), mobile: fresh()}});
   let data = empty();
   let storage = {available: true, warning: ''};
   const question = (profile, id) => bank[profile].find(q => q.id === id);
@@ -143,7 +157,7 @@
     checkObject(raw.profiles, PROFILE_IDS);
     const clean = empty();
     for (const profile of PROFILE_IDS) {
-      if (!Object.prototype.hasOwnProperty.call(raw.profiles, profile)) {if (profile === 'fde') continue; fail();}
+      if (!Object.prototype.hasOwnProperty.call(raw.profiles, profile)) {if (profile === 'fde' || profile === 'mobile') continue; fail();}
       const p = checkObject(raw.profiles[profile], ['stage', 'completedStages', 'quiz', 'recentEvidence']);
       if (!STAGE_IDS.includes(p.stage) || !Array.isArray(p.completedStages) || p.completedStages.length > 7 || new Set(p.completedStages).size !== p.completedStages.length || p.completedStages.some(id => !STAGE_IDS.includes(id))) fail();
       const quiz = checkObject(p.quiz, ['attempts', 'active']);
