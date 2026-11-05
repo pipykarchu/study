@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>移动端六周实战 · 貅知识</title>
+<style>body{font:17px/1.8 system-ui,sans-serif;color:#362d44;background:#fcf8fd;margin:0}main{max-width:850px;margin:auto;padding:24px}h1,h2,h3{line-height:1.4}section{background:white;border:1px solid #e9dfee;border-radius:16px;padding:22px;margin:20px 0}a{color:#71459b}li{margin:10px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f0fa;padding:16px;border-radius:12px}table{border-collapse:collapse;width:100%;font-size:15px}th,td{border:1px solid #ddd;padding:10px;text-align:left} .table{overflow:auto}code{overflow-wrap:anywhere}</style></head>
+<body><main>
+<p><a href="./index.html#framework">返回学习空间（选择原来的角色和方向）</a></p>
+<h1>移动端开发：每周交付一个小版本</h1>
+<p>这是可选的初学者路线。围绕同一个「学习打卡」作品连续迭代六周，每周建议 3 次 × 30–45 分钟，可按自己的时间拆分；验收没通过就延长，不以日期自动记完成。站内通用「10 次学习」是单次学习工具，不是这份六周排期。</p>
+<p><strong>起步采用 HTML / CSS / JavaScript 移动网页</strong>，需要一台能编辑文件、打开浏览器的电脑；真机验收另需手机。不要求安装原生 SDK，不假设会 ArkTS。六周成果应称移动网页练习，不能称 HarmonyOS 原生应用、商店发布或生产上线。</p>
+<section><h2>六节点与每周安排</h2><div class="table"><table><thead><tr><th>周 / 节点</th><th>前置与三次实践</th><th>验收 / 留下的版本</th></tr></thead><tbody>
+<tr><td>1 · 基础 UI</td><td>新建文件与浏览器操作；认识标题、段落、按钮、选择器。画卡片 → 写布局 → 实现一次打卡。</td><td>360 / 390px 无横向滚动，点击有反馈，重复点击无重复记录；v0.1 卡片、截图、验收表。</td></tr>
+<tr><td>2 · 交互事件</td><td>在 v0.1 上学习变量、函数与事件；添加目标输入 → trim 与 1–30 字校验 → 键盘提交与错误反馈。</td><td>空白/超长拒绝，正常可保存，点击与键盘一致；v0.2、四类输入用例。</td></tr>
+<tr><td>3 · 状态管理</td><td>在 v0.2 上认识数组、对象、布尔值；定义稳定 id → 从统一状态渲染列表 → 添加/完成/删除/计数。</td><td>3 项中完成 1 项、删除 1 项，计数一致；同名可区分，删除最后一项有空状态；v0.3、状态流说明。</td></tr>
+<tr><td>4 · 本地保存</td><td>在 v0.3 上学习 JSON 与 try/catch；写入 → 启动恢复与结构校验 → 演练损坏数据和不可用存储。</td><td>同浏览器刷新恢复；无数据/损坏/写入失败可操作且有反馈；v0.4、正常与异常记录。只承诺本地保存。</td></tr>
+<tr><td>5 · 调试测试</td><td>在 v0.4 上学习控制台、断点与断言；复现 → 定位修复 → 状态函数测试与界面回归。</td><td>至少 8 条预期/实际用例，至少 1 次问题修复（人为注入需标注）；v0.5、测试命令和结果、bug 记录。</td></tr>
+<tr><td>6 · 完整交付</td><td>在 v0.5 上整理启动文档 → 干净目录复现并录制核心流程 → 合上教程独立改一个小需求并讲解。</td><td>v1、README、演示、已知限制、贡献清单；不能独立解释的部分列待补，不写为已掌握。</td></tr>
+</tbody></table></div></section>
+<section id="week1"><h2>第一周：手机学习打卡卡片</h2>
+<p><strong>目标：</strong>做一个单页，显示「今日学习目标」「尚未打卡」和「完成今日学习」按钮。点击后状态变为「今日已打卡」，按钮禁用或变为已完成。刷新后重置是本周明确边界；数据保存放到第 4 周。</p>
+<h3>先补这些知识</h3><ul><li>能创建文件夹、保存纯文本文件，确认扩展名没有变成 .txt；不知道 Git 时可先留日期命名的代码副本。</li><li>HTML：h1、p、button 和 script / link；CSS：选择器、padding、max-width、box-sizing；JS：变量、函数、querySelector、addEventListener、textContent 与 disabled。</li><li>浏览器控制台：知道在哪里查看红色错误。遇到不会的只查当前步骤需要的内容，不先学完整框架。</li></ul>
+<h3>三次实践的实施步骤</h3><ol>
+<li><strong>第 1 次 · 结构：</strong>创建 mobile-checkin 文件夹和 index.html、style.css、main.js 三个空文件。在 HTML 写 doctype、lang、字符编码和 viewport；通过 link 引入样式，script defer 引入 JS。写标题、固定目标、初始状态、原生 button。打开 index.html 确认文字出现。画下点击前后两种状态。</li>
+<li><strong>第 2 次 · 手机布局：</strong>给主容器加 max-width、内边距与居中样式，使用 border-box。为按钮提供至少 44px 高度、可读文字和可见焦点。控制台切换 360px 和 390px 宽度，检查无横向滚动、文字不截断。此时先不做输入、列表或保存。</li>
+<li><strong>第 3 次 · 事件与自测：</strong>定位按钮和状态元素，绑定 click。用布尔值记录是否打卡；首次点击更新状态并禁用按钮，重复操作直接返回。刷新验证回到初始态。故意改错一个选择器，记录报错/现象、定位和修复；标为人为注入。最后关掉教程，独立修改目标文案和已完成反馈，再按下面用例验收。</li>
+</ol>
+<p>这些是实现任务，本站没有替你完成学习打卡应用。可请 AI 解释或审查一小段；将 AI 生成部分与自己修改、调试的部分分开记录。保留 v0.1 代码快照，再逐周迭代，避免每周重做一个无关项目。</p>
+<h3>首周验收表（由本人填写实际结果）</h3><div class="table"><table><thead><tr><th>操作 / 环境</th><th>预期</th><th>实际 / 证据</th></tr></thead><tbody>
+<tr><td>首次打开</td><td>目标、未打卡状态、可操作按钮可见</td><td>待验证</td></tr>
+<tr><td>点击一次</td><td>显示今日已打卡，按钮禁用或已完成</td><td>待验证</td></tr>
+<tr><td>再次点击 / 快速连点</td><td>不产生重复状态或重复记录</td><td>待验证</td></tr>
+<tr><td>键盘 Tab → Enter / Space</td><td>有焦点提示，可完成打卡</td><td>待验证</td></tr>
+<tr><td>刷新</td><td>回到未打卡（本周约定）</td><td>待验证</td></tr>
+<tr><td>360px / 390px 浏览器模拟</td><td>无横向滚动、文案可读、按钮可操作</td><td>待验证</td></tr>
+<tr><td>实际手机浏览器</td><td>记录设备/浏览器/访问方法及打卡结果；暂不可访问则标未测</td><td>待验证；模拟结果不能替代真机</td></tr>
+<tr><td>控制台 / 故障修复</td><td>正常流程无未处理异常，保留一次定位与回归过程</td><td>待验证</td></tr>
+</tbody></table></div>
+<p>可以先在电脑完成模拟验收；有手机访问条件后再补真机测试，不要为了交作业开放不熟悉的网络服务。若无法在电脑新建文件和运行页面，先把第一次实践用于环境准备，其余任务顺延。</p>
+</section>
+<section><h2>每周成果记录模板</h2><p>在「移动端开发」对应节点写理解与练习证据，再沉淀为该节点资料；使用原有七步记录机制。需要记录阶段完成时，附上自己实际做过的动作和结果。个人学习证据留在当前角色空间，公开仓库只提交适合公开的代码和说明。</p>
+<pre>周次 / 节点：
+状态：计划中 / 进行中 / 已按范围验收（自己填写）
+本周目标与暂不做：
+前置知识：已理解……；仍需补……
+实现步骤与关键代码位置：
+代码版本：仓库链接 + commit / 日期快照
+个人贡献：我编写/修改了……，原因是……
+AI / 教程协助：生成/参考了……；我审查并验证了……
+测试：操作 | 预期 | 实际 | 通过/失败/未测 | 环境 | 证据链接
+截图 / 演示：点击前、点击后、窄屏；真机或模拟须标注
+问题：复现 → 原因 → 修复 → 回归（人为注入须标注）
+独立迁移：合上教程后我改了……，结果……
+参考测验：本次得分……；错因……（不作为作品验收）
+未完成项 / 限制：
+下周在本版本上增加：
+</pre>
+<p><strong>简历表述模板（仅在真实完成后填写）：</strong>「在学习打卡移动网页练习中，我负责［实际模块］，实现［真实功能］；通过［设备/浏览器与用例数］验证［有证据的结果］。AI 协助［范围］，我独立完成［可解释的修改与调试］。」不要预填“熟练”“生产上线”或虚构改进百分比。</p>
+<p><strong>面试 3 分钟：</strong>30 秒讲需求和范围，60 秒演示核心流程，60 秒说明一个真实 bug 的定位和个人修改，30 秒说明限制及下一步。代码实现、参考题通过和本人实际成果分别陈述。</p></section>
+<section><h2>后续可选：HarmonyOS 专项</h2><p>六周后再决定是否迁移：先确认电脑系统、设备和开发工具要求是否满足，按当时官方文档完成环境核对；从 ArkTS 基础和 ArkUI 单页事件开始，先迁移同一打卡卡片，再比较状态、生命周期、本地存储和测试。没配置成功就记录阻塞，不假设已会，也不把网页代码当作原生作品。</p>
+<p>路线是本站学习建议，12 道题是自编参考题，不是官方题、认证或对本人能力的判断。新增方向和指南不会自动新增任何完成证据、成绩或自测勾选。</p></section>
+</main></body></html>

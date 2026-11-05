@@ -42,7 +42,7 @@ async function imaReadBody(request) {
 }
 function imaScope(body, url, allowed) {
   const expected = new Set(['roleId', 'profileId', ...allowed]);
-  if (Object.keys(body).some(key => !expected.has(key)) || !['apple', 'sheep', 'bear'].includes(body.roleId) || !['product', 'coding', 'fde', 'custom'].includes(body.profileId)) throw new HttpError(400, 'invalid_ima_scope', '请选择当前角色和学习方向后再操作。');
+  if (Object.keys(body).some(key => !expected.has(key)) || !['apple', 'sheep', 'bear'].includes(body.roleId) || !['product', 'coding', 'fde', 'custom', 'mobile'].includes(body.profileId)) throw new HttpError(400, 'invalid_ima_scope', '请选择当前角色和学习方向后再操作。');
   const queryRoles = url.searchParams.getAll('role');
   if (queryRoles.length > 1 || queryRoles.length === 1 && queryRoles[0] !== body.roleId) throw new HttpError(400, 'role_mismatch', '当前角色与资料操作不一致，请刷新后重试。');
   return {roleId: body.roleId, profileId: body.profileId};

@@ -1,6 +1,6 @@
 // Sites supplies verified visitor identity at the deployment boundary. No service-token bypass.
 const MAX_BODY = 2_000_000;
-const PROFILE_IDS = ['product', 'coding', 'custom', 'fde'];
+const PROFILE_IDS = ['product', 'coding', 'custom', 'fde', 'mobile'];
 const APP_KEYS = ['version', 'profile', 'goals', 'completed', 'tasks', 'notes', 'reviews', 'projectTasks', 'boundaries', 'minutes', 'day', 'timer', 'frameworks', 'materials', 'imaTargets'];
 const ICON_NAMES = ['garden', 'map', 'book', 'project', 'spark', 'shelf', 'arrow', 'check', 'clock', 'github', 'target', 'copy', 'plus', 'download'];
 const IDENTITY = {verified: true, owner: true};
